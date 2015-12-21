@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-import matplotlib.colors as colors
+#import matplotlib.colors as colors
 from matplotlib.cm import ScalarMappable
 import numpy as np
 
