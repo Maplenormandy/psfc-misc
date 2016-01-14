@@ -150,51 +150,52 @@ class ShotManager:
 
         ShotManager.allShots.append(self)
 
-print "Try typing 'shot 1150903021'"
-
-line = False
-
-
-while True:
-    line = raw_input().lower()
-
-    if line == 'exit':
-        sys.exit(0)
-        break
-
-    toks = line.split(' ')
-
-    try:
-        if toks[0] == 'shot':
-            sm = None
-            if len(toks) == 2:
-                sm = ShotManager(int(toks[1]))
-            elif len(toks) == 3:
-                sm = ShotManager(int(toks[1]), int(toks[2]))
-            elif len(toks) == 4:
-                sm = ShotManager(int(toks[1]), int(toks[2]), int(toks[3]))
-            else:
-                print "Syntax is 'shot shotNumber [numChannels] [THT]'"
-
-            if sm != None:
-                nlplots.plot(sm)
-
-        if toks[0] == 'reload':
-            if toks[1] == 'plots':
-                reload(nlplots)
-                for figNum in plt.get_fignums():
-                    fig = plt.close(plt.figure(figNum))
-
-                for sm in ShotManager.allShots:
+if __name__ == "__main__":
+    print "Try typing 'shot 1150903021'"
+    
+    line = False
+    
+    
+    while True:
+        line = raw_input().lower()
+    
+        if line == 'exit':
+            sys.exit(0)
+            break
+    
+        toks = line.split(' ')
+    
+        try:
+            if toks[0] == 'shot':
+                sm = None
+                if len(toks) == 2:
+                    sm = ShotManager(int(toks[1]))
+                elif len(toks) == 3:
+                    sm = ShotManager(int(toks[1]), int(toks[2]))
+                elif len(toks) == 4:
+                    sm = ShotManager(int(toks[1]), int(toks[2]), int(toks[3]))
+                else:
+                    print "Syntax is 'shot shotNumber [numChannels] [THT]'"
+    
+                if sm != None:
                     nlplots.plot(sm)
-
-        if toks[0] == 'save':
-            if toks[1] == 'plots':
-                i = 0
-                for figNum in plt.get_fignums():
-                    plt.figure(figNum).savefig(str(i) + '.png')
-                    print "Saved " + str(i) + ".png"
-                    i += 1
-
-    except:
-        traceback.print_exc()
+    
+            if toks[0] == 'reload':
+                if toks[1] == 'plots':
+                    reload(nlplots)
+                    for figNum in plt.get_fignums():
+                        fig = plt.close(plt.figure(figNum))
+    
+                    for sm in ShotManager.allShots:
+                        nlplots.plot(sm)
+    
+            if toks[0] == 'save':
+                if toks[1] == 'plots':
+                    i = 0
+                    for figNum in plt.get_fignums():
+                        plt.figure(figNum).savefig(str(i) + '.png')
+                        print "Saved " + str(i) + ".png"
+                        i += 1
+    
+        except:
+            traceback.print_exc()

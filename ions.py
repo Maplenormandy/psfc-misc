@@ -13,6 +13,8 @@ from matplotlib.widgets import Slider
 
 readline
 
+plt.close("all")
+
 class ThacoData:
     def __init__(self, thtNode, shot=None, tht=None):
         if (shot != None):
@@ -44,6 +46,24 @@ class ThacoData:
         self.pro = rpro[:,:goodTimes,:len(self.rho)]
         self.perr = rperr[:,:goodTimes,:len(self.rho)]
 
+
+class TciData:
+    def __init__(self, tciNode):
+        self.tciNode = tciNode
+
+        self.rmid  = self.tciNode.getNode('rad').data()
+        self.time = [None]*10
+        self.dens = [None]*10
+
+        for i in range(1,11):
+            dnode = self.tciNode.getNode('nl_%02d' % i)
+            self.time[i-1] = dnode.dim_of().data()
+            self.dens[i-1] = dnode.data()
+
+        self.time = np.array(self.time)
+        self.dens = np.array(self.dens)
+
+
 #td = ThacoData(None, 1150901020, 1)
 
 shotList = [
@@ -73,7 +93,6 @@ shotList = [
         1150903025,
         1150903026,
         1150903028,
-        
         1120216006,
         1120216007,
         1120216008,
@@ -108,9 +127,19 @@ shotList = [
         1120106030,
         1120106031,
         1120106032
+        
+        
         ]
+"""  
+
+        
+"""
 shotDict = {}
 
+f0 = plt.figure()
+ax0 = f0.add_axes([0.1, 0.1, 0.8, 0.8])
+
+"""
 f1 = plt.figure()
 f2 = plt.figure()
 f3 = plt.figure()
@@ -120,6 +149,10 @@ ax1 = f1.add_axes([0.1, 0.1, 0.8, 0.8])
 ax2 = f2.add_axes([0.1, 0.1, 0.8, 0.8])
 ax3 = f3.add_axes([0.1, 0.1, 0.8, 0.8])
 ax4 = f4.add_axes([0.1, 0.1, 0.8, 0.8])
+"""
+
+f5 = plt.figure()
+ax5 = f5.add_axes([0.1, 0.1, 0.8, 0.8])
 
 labela = '1.2MW'
 labelb = '0.6MW'
@@ -130,7 +163,11 @@ rho2 = []
 rho3 = []
 rho4 = []
 
+
 for shot in shotList:
+    if shot < 1150000000:
+        continue
+    
     #print shot
     try:
         td = ThacoData(None, shot, 1)
@@ -141,6 +178,9 @@ for shot in shotList:
             continue
     rfTree = MDSplus.Tree('rf', shot)
     rfNode = rfTree.getNode('\\rf::rf_power_net')
+    
+    elecTree = MDSplus.Tree('electrons', shot)
+    tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS')
 
     rfTime = rfNode.dim_of().data()
     inds = np.all([rfTime > td.time[0], rfTime < td.time[-1]], axis=0)
@@ -150,11 +190,20 @@ for shot in shotList:
     
     #print rfMed
 
+    
     temps = td.pro[3,:,:]
     #print temps.shape
     tempMean = np.mean(temps, axis=0)
     #print tempMean.shape
     tempStd = np.std(temps, axis=0)
+    
+    percentDev = tempStd / tempMean
+    
+    
+    rots = td.pro[1,:,:]
+    rotsLaplacian = np.sqrt(np.sum(np.diff(rots, n=2, axis=0) ** 2, axis=0))
+    
+    
     
     label = ''
     
@@ -174,9 +223,14 @@ for shot in shotList:
         label=labelc
         labelc = ''
     
-    percentDev = tempStd / tempMean
     
-    if tempMean[0] > 0 and tempMean[12] > 0:
+    
+    #if tempMean[0] > 0 and tempMean[12] > 0:
+    if True:
+        #ax0.scatter(tempMean, percentDev, c=col, marker=mark, label=label)
+        
+        
+        """
         idx1 = 0
         rho1.append(td.rho[idx1])
         idx2 = (np.abs(td.rho-0.03)).argmin()
@@ -189,7 +243,16 @@ for shot in shotList:
         ax2.scatter(tempMean[idx2], percentDev[idx2], c=col, marker=mark, label=label)
         ax3.scatter(tempMean[idx3], percentDev[idx3], c=col, marker=mark, label=label)
         ax4.scatter(tempMean[idx4], percentDev[idx4], c=col, marker=mark, label=label)
+        """
+        
+        ax5.scatter(td.rho, rotsLaplacian, c=col, marker=mark, label=label)
 
+ax0.set_title('% RMS Ti Deviation from mean, whole profile')
+ax0.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
+ax0.set_xlabel('Mean[Ti] [keV]')
+ax0.legend(loc='upper left')
+
+"""
 ax1.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho1)))
 ax2.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho2)))
 ax3.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho3)))
@@ -212,5 +275,11 @@ ax1.legend(loc='upper left')
 ax2.legend(loc='upper left')
 ax3.legend(loc='upper left')
 ax4.legend(loc='upper left')
+"""
+
+ax5.set_title('RMS Vtor second derivative')
+ax5.set_ylabel('RMS(d^2/dx^2[Vtor]) [kHz]')
+ax5.set_xlabel('r/a')
+ax5.legend(loc='upper right')
 
 plt.show()
