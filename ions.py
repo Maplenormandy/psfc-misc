@@ -11,9 +11,6 @@ import readline
 import MDSplus
 from matplotlib.widgets import Slider
 
-from scipy.interpolate import bisplrep, bisplev, splprep, splev
-import scipy.io as sio
-
 readline
 
 class ThacoData:
@@ -75,61 +72,145 @@ shotList = [
         1150903024,
         1150903025,
         1150903026,
-        1150903028
+        1150903028,
+        
+        1120216006,
+        1120216007,
+        1120216008,
+        1120216009,
+        1120216010,
+        1120216011,
+        1120216012,
+        1120216013,
+        1120216014,
+        1120216017,
+        1120216020,
+        1120216021,
+        1120216023,
+        1120216025,
+        1120216026,
+        1120216028,
+        1120216030,
+        1120216031,
+        1120106010,
+        1120106011,
+        1120106012,
+        1120106015,
+        1120106016,
+        1120106017,
+        1120106020,
+        1120106021,
+        1120106022,
+        1120106025,
+        1120106026,
+        1120106027,
+        1120106028,
+        1120106030,
+        1120106031,
+        1120106032
         ]
 shotDict = {}
 
+f1 = plt.figure()
+f2 = plt.figure()
+f3 = plt.figure()
+f4 = plt.figure()
+
+ax1 = f1.add_axes([0.1, 0.1, 0.8, 0.8])
+ax2 = f2.add_axes([0.1, 0.1, 0.8, 0.8])
+ax3 = f3.add_axes([0.1, 0.1, 0.8, 0.8])
+ax4 = f4.add_axes([0.1, 0.1, 0.8, 0.8])
+
+labela = '1.2MW'
+labelb = '0.6MW'
+labelc = '0.0MW'
+
+rho1 = []
+rho2 = []
+rho3 = []
+rho4 = []
+
 for shot in shotList:
-    print shot
-    td = ThacoData(None, shot, 1)
-    shotDict['shot' + str(shot)] = {
-            'time': td.time,
-            'rho': td.rho,
-            'pro': td.pro,
-            'perr': td.perr
-            }
+    #print shot
+    try:
+        td = ThacoData(None, shot, 1)
+    except:
+        try:
+            td = ThacoData(None, shot, 0)
+        except:
+            continue
+    rfTree = MDSplus.Tree('rf', shot)
+    rfNode = rfTree.getNode('\\rf::rf_power_net')
 
-sio.savemat('mp793shots.mat', shotDict)
+    rfTime = rfNode.dim_of().data()
+    inds = np.all([rfTime > td.time[0], rfTime < td.time[-1]], axis=0)
+    rfGood = rfNode.data()[inds]
+    
+    rfMed = np.array([np.median(rfGood)] * len(td.rho))
+    
+    #print rfMed
 
-"""
-# Get B-Spline fit
-tgrid, rgrid = np.meshgrid(td.time, td.rho)
-btck = bisplrep(tgrid.flatten(), rgrid.flatten(), td.pro[3,:,:].T.flatten(), \
-                             w = 1.0 / td.perr[3,:,:].flatten(), s=len(tgrid.flatten())**1.3, \
-                             kx = 3, ky = 3)
+    temps = td.pro[3,:,:]
+    #print temps.shape
+    tempMean = np.mean(temps, axis=0)
+    #print tempMean.shape
+    tempStd = np.std(temps, axis=0)
+    
+    label = ''
+    
+    if rfMed[0] > 0.9:
+        mark = '*'
+        col = 'r'
+        label=labela
+        labela = ''
+    elif rfMed[0] > 0.3:
+        mark = '^'
+        col = 'g'
+        label=labelb
+        labelb = ''
+    else:
+        mark = 'o'
+        col = 'b'
+        label=labelc
+        labelc = ''
+    
+    percentDev = tempStd / tempMean
+    
+    if tempMean[0] > 0 and tempMean[12] > 0:
+        idx1 = 0
+        rho1.append(td.rho[idx1])
+        idx2 = (np.abs(td.rho-0.03)).argmin()
+        rho2.append(td.rho[idx2])
+        idx3 = (np.abs(td.rho-0.12)).argmin()
+        rho3.append(td.rho[idx3])
+        idx4 = (np.abs(td.rho-0.5)).argmin()
+        rho4.append(td.rho[idx4])
+        ax1.scatter(tempMean[idx1], percentDev[idx1], c=col, marker=mark, label=label)
+        ax2.scatter(tempMean[idx2], percentDev[idx2], c=col, marker=mark, label=label)
+        ax3.scatter(tempMean[idx3], percentDev[idx3], c=col, marker=mark, label=label)
+        ax4.scatter(tempMean[idx4], percentDev[idx4], c=col, marker=mark, label=label)
 
-stck, u = splprep([td.pro[3,5,:]], w = 1.0 / td.perr[3,5,:], \
-                      u = td.rho, k = 3, s = len(td.rho)-np.sqrt(2*len(td.rho)))
+ax1.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho1)))
+ax2.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho2)))
+ax3.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho3)))
+ax4.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho4)))
 
-rplot = np.linspace(0.0,1.0)
+ax1.set_xlabel('Mean[Ti] [keV]')
+ax2.set_xlabel('Mean[Ti] [keV]')
+ax3.set_xlabel('Mean[Ti] [keV]')
+ax4.set_xlabel('Mean[Ti] [keV]')
 
-timeVar = 15
+#ax1.set_ylim([0.02, 0.21])
+#ax2.set_ylim([0.02, 0.21])
 
-tb = bisplev(td.time[timeVar], rplot, btck)
-ts = splev(rplot, stck)
+ax1.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
+ax2.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
+ax3.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
+ax4.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
 
-plt.figure()
-line, (bottoms, tops), verts = plt.errorbar(td.rho, td.pro[3,timeVar,:], yerr=td.perr[3,timeVar,:], fmt='.')
-axb = plt.plot(rplot, tb)
-axs = plt.plot(rplot, ts[0])
+ax1.legend(loc='upper left')
+ax2.legend(loc='upper left')
+ax3.legend(loc='upper left')
+ax4.legend(loc='upper left')
 
-axtime = plt.axes([0.25, 0.01, 0.65, 0.03])
-stime = Slider(axtime, 'Time', td.time.min(), td.time.max(), valinit = td.time[timeVar])
-
-def update(val):
-    global timeVar
-
-    idx = np.abs(td.time - val).argmin()
-    if idx != timeVar:
-        timeVar = idx
-
-    pass
-
-plt.xlabel('r/a')
-plt.ylabel('T [keV]')
 plt.show()
-
-print "Knot Vector:", stck[0]
-print "B-Spline Coefs:", stck[1]
-print "Degree:", stck[2]
-"""
