@@ -8,7 +8,58 @@ Created on Thu Jan 14 13:51:24 2016
 import numpy as np
 from scipy.signal import medfilt
 
-shotList = [
+
+def findColdPulses(ipNode, minTime, maxTime):
+    ip = ipNode.data()
+    time = ipNode.dim_of().data()
+    
+    goodIp = ip[np.all([time >= minTime, time <= maxTime], axis=0)]
+    
+    ipMed = np.median(goodIp)
+    
+    if ipMed > 0:
+       ip = -ip 
+       ipMed = np.median(goodIp)
+    
+    ipFilt = (medfilt(np.roll(ip, -15), 31) - medfilt(np.roll(ip, 75), 151))
+    ipFilt = medfilt(ipFilt, 151)
+    
+    threshIp = np.abs(ipMed) * 0.001
+    
+    ipFiltG = ipFilt * np.all([ipFilt > np.roll(ipFilt, 1), ipFilt <= np.roll(ipFilt, -1), ipFilt > threshIp], axis=0)
+    ipFiltL = ipFilt * np.all([ipFilt < np.roll(ipFilt, 1), ipFilt >= np.roll(ipFilt, -1), ipFilt < -threshIp/2], axis=0)
+    
+    lastPeak = -1
+    lastInd = 0
+    
+    pulseTimes = []
+    
+    for i in range(len(ipFiltG)):
+        if time[i] < minTime or time[i] > maxTime:
+            continue
+        
+        if ipFiltG[i] > lastPeak:
+            lastPeak = ipFiltG[i]
+            lastInd = i
+        
+        if lastPeak > 0 and ipFiltL[i] < -threshIp:
+            if time[i] - time[lastInd] < 0.06:
+                if len(pulseTimes) == 0 or time[lastInd] - pulseTimes[-1] > 0.05:
+                    pulseTimes.append(time[lastInd])
+                    lastPeak = -1
+                
+    return np.array(pulseTimes)
+        
+        
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    
+    import readline
+    import MDSplus
+    
+    
+    shotList = [
         1150901005,
         1150901006,
         1150901007,
@@ -70,56 +121,7 @@ shotList = [
         1120106031,
         1120106032
         ]
-
-def findColdPulses(ipNode, minTime, maxTime):
-    ip = ipNode.data()
-    time = ipNode.dim_of().data()
-    
-    goodIp = ip[np.all([time >= minTime, time <= maxTime], axis=0)]
-    
-    ipMed = np.median(goodIp)
-    
-    if ipMed > 0:
-       ip = -ip 
-       ipMed = np.median(goodIp)
-    
-    ipFilt = (medfilt(np.roll(ip, -15), 31) - medfilt(np.roll(ip, 75), 151))
-    ipFilt = medfilt(ipFilt, 151)
-    
-    threshIp = np.abs(ipMed) * 0.001
-    
-    ipFiltG = ipFilt * np.all([ipFilt > np.roll(ipFilt, 1), ipFilt <= np.roll(ipFilt, -1), ipFilt > threshIp], axis=0)
-    ipFiltL = ipFilt * np.all([ipFilt < np.roll(ipFilt, 1), ipFilt >= np.roll(ipFilt, -1), ipFilt < -threshIp/2], axis=0)
-    
-    lastPeak = -1
-    lastInd = 0
-    
-    pulseTimes = []
-    
-    for i in range(len(ipFiltG)):
-        if time[i] < minTime or time[i] > maxTime:
-            continue
         
-        if ipFiltG[i] > lastPeak:
-            lastPeak = ipFiltG[i]
-            lastInd = i
-        
-        if lastPeak > 0 and ipFiltL[i] < -threshIp:
-            if time[i] - time[lastInd] < 0.06:
-                if len(pulseTimes) == 0 or time[lastInd] - pulseTimes[-1] > 0.05:
-                    pulseTimes.append(time[lastInd])
-                    lastPeak = -1
-                
-    return np.array(pulseTimes)
-        
-        
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    
-    import readline
-    import MDSplus
-    
     for shot in shotList:
         magTree = MDSplus.Tree('magnetics', shot)
         ipNode = magTree.getNode('\magnetics::ip')

@@ -9,7 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import readline
 import MDSplus
-from matplotlib.widgets import Slider
 
 readline
 
@@ -130,14 +129,11 @@ shotList = [
         
         
         ]
-"""  
-
         
-"""
 shotDict = {}
 
-f0 = plt.figure()
-ax0 = f0.add_axes([0.1, 0.1, 0.8, 0.8])
+#f0 = plt.figure()
+#ax0 = f0.add_axes([0.1, 0.1, 0.8, 0.8])
 
 """
 f1 = plt.figure()
@@ -153,6 +149,9 @@ ax4 = f4.add_axes([0.1, 0.1, 0.8, 0.8])
 
 f5 = plt.figure()
 ax5 = f5.add_axes([0.1, 0.1, 0.8, 0.8])
+
+#f6 = plt.figure()
+#ax6 = f6.add_axes([0.1, 0.1, 0.8, 0.8])
 
 labela = '1.2MW'
 labelb = '0.6MW'
@@ -181,6 +180,11 @@ for shot in shotList:
     
     elecTree = MDSplus.Tree('electrons', shot)
     tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS')
+    
+    magTree = MDSplus.Tree('magnetics', shot)
+    ipNode = magTree.getNode('\magnetics::ip')
+    
+    tci = TciData(tciNode)
 
     rfTime = rfNode.dim_of().data()
     inds = np.all([rfTime > td.time[0], rfTime < td.time[-1]], axis=0)
@@ -188,15 +192,10 @@ for shot in shotList:
     
     rfMed = np.array([np.median(rfGood)] * len(td.rho))
     
-    #print rfMed
-
     
     temps = td.pro[3,:,:]
-    #print temps.shape
     tempMean = np.mean(temps, axis=0)
-    #print tempMean.shape
     tempStd = np.std(temps, axis=0)
-    
     percentDev = tempStd / tempMean
     
     
@@ -204,6 +203,13 @@ for shot in shotList:
     rotsLaplacian = np.sqrt(np.sum(np.diff(rots, n=2, axis=0) ** 2, axis=0))
     
     
+    try:
+        rotMeans = np.average(rots, axis=1, weights=td.pro[0,:,:])
+    except:
+        continue
+    
+    #disagreeInd = np.all([rots[:,0] * rotMeans, rotMeans > 2.5], axis=0)
+    #print shot, td.time[disagreeInd]
     
     label = ''
     
@@ -244,13 +250,18 @@ for shot in shotList:
         ax3.scatter(tempMean[idx3], percentDev[idx3], c=col, marker=mark, label=label)
         ax4.scatter(tempMean[idx4], percentDev[idx4], c=col, marker=mark, label=label)
         """
-        
-        ax5.scatter(td.rho, rotsLaplacian, c=col, marker=mark, label=label)
 
+        #ax5.scatter(td.rho, rotsLaplacian, c=col, marker=mark, label=label)
+        ax5.scatter(np.array([td.rho] * rots.shape[0]).flatten(), (rots - np.array([rotMeans] * len(td.rho)).T).flatten(), c=col, marker=mark, label=label)
+        
+        #ax6.scatter(rotMeans, rots[:,0], c=col, marker=mark, label=label)
+
+"""
 ax0.set_title('% RMS Ti Deviation from mean, whole profile')
 ax0.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
 ax0.set_xlabel('Mean[Ti] [keV]')
 ax0.legend(loc='upper left')
+"""
 
 """
 ax1.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho1)))
@@ -277,9 +288,24 @@ ax3.legend(loc='upper left')
 ax4.legend(loc='upper left')
 """
 
+"""
 ax5.set_title('RMS Vtor second derivative')
 ax5.set_ylabel('RMS(d^2/dx^2[Vtor]) [kHz]')
 ax5.set_xlabel('r/a')
 ax5.legend(loc='upper right')
+"""
+
+ax5.set_title('Vtor fluctuation contribution over entire profile')
+ax5.set_ylabel('Vtor - Emissivity-averaged Vtor [kHz]')
+ax5.set_xlabel('r/a')
+ax5.legend(loc='upper right')
+
+"""
+ax6.plot([-5, 15], [-5, 15], 'r-')
+ax6.set_title('Noise in Vtor')
+ax6.set_ylabel('Core Vtor [kHz]')
+ax6.set_xlabel('Emissivity-Averaged Vtor [kHz]')
+ax6.legend(loc='upper left')
+"""
 
 plt.show()

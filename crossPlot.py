@@ -5,6 +5,8 @@ import MDSplus
 
 import matplotlib.pyplot as plt
 
+from pulseFinder import findColdPulses
+
 """
 shotList = [
         1150901005,
