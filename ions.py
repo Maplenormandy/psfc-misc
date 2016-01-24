@@ -46,6 +46,35 @@ class ThacoData:
         self.perr = rperr[:,:goodTimes,:len(self.rho)]
 
 
+class HirexsrSpecData:
+    def __init__(self, thtNode, shot=None, tht=None):
+        if (shot != None):
+            self.shot = shot
+            self.specTree = MDSplus.Tree('spectroscopy', shot)
+
+            if (tht == 0):
+                self.tht = ''
+            else:
+                self.tht = str(tht)
+
+            self.thtNode = self.specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS' + self.tht + '.HELIKE.SPEC')
+        else:
+            self.thtNode = thtNode
+
+        specNode = self.thtNode.getNode('SPECBR')
+        rbr = specNode.data()
+        rtime = specNode.dim_of(1).data()
+        
+        goodChans = (rbr[0,0,:] > 0).sum()
+        goodTimes = (rtime > 0).sum()
+        
+        self.time = rtime[:goodTimes]
+        self.br = rbr[:,:goodTimes,:goodChans]
+        
+    def backgroundLevel(self):
+        return np.percentile(self.br, 10, axis=0)
+        
+
 class TciData:
     def __init__(self, tciNode):
         self.tciNode = tciNode
@@ -62,8 +91,6 @@ class TciData:
         self.time = np.array(self.time)
         self.dens = np.array(self.dens)
 
-
-#td = ThacoData(None, 1150901020, 1)
 
 shotList = [
         1150901005,
@@ -170,9 +197,11 @@ for shot in shotList:
     #print shot
     try:
         td = ThacoData(None, shot, 1)
+        sd = HirexsrSpecData(None, shot, 1)
     except:
         try:
             td = ThacoData(None, shot, 0)
+            sd = HirexsrSpecData(None, shot, 0)
         except:
             continue
     rfTree = MDSplus.Tree('rf', shot)
@@ -250,7 +279,7 @@ for shot in shotList:
         """
 
         #ax5.scatter(td.rho, rotsLaplacian, c=col, marker=mark, label=label)
-        ax5.scatter(np.array([td.rho] * rots.shape[0]).flatten(), (rotsDev).flatten(), c=col, marker=mark, label=label)
+        #ax5.scatter(np.array([td.rho] * rots.shape[0]).flatten(), (rotsDev).flatten(), c=col, marker=mark, label=label)
         
         #ax6.scatter(rotMeans, rots[:,0], c=col, marker=mark, label=label)
 

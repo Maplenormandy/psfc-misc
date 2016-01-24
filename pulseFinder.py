@@ -7,53 +7,30 @@ Created on Thu Jan 14 13:51:24 2016
 
 import numpy as np
 from scipy.signal import medfilt
+import matplotlib.pyplot as plt
 
 
-def findColdPulses(ipNode, minTime, maxTime):
-    ip = ipNode.data()
-    time = ipNode.dim_of().data()
-    
-    goodIp = ip[np.all([time >= minTime, time <= maxTime], axis=0)]
-    
-    ipMed = np.median(goodIp)
-    
-    if ipMed > 0:
-       ip = -ip 
-       ipMed = np.median(goodIp)
-    
-    ipFilt = (medfilt(np.roll(ip, -15), 31) - medfilt(np.roll(ip, 75), 151))
-    ipFilt = medfilt(ipFilt, 151)
-    
-    threshIp = np.abs(ipMed) * 0.001
-    
-    ipFiltG = ipFilt * np.all([ipFilt > np.roll(ipFilt, 1), ipFilt <= np.roll(ipFilt, -1), ipFilt > threshIp], axis=0)
-    ipFiltL = ipFilt * np.all([ipFilt < np.roll(ipFilt, 1), ipFilt >= np.roll(ipFilt, -1), ipFilt < -threshIp/2], axis=0)
-    
-    lastPeak = -1
-    lastInd = 0
-    
-    pulseTimes = []
-    
-    for i in range(len(ipFiltG)):
-        if time[i] < minTime or time[i] > maxTime:
-            continue
+def findColdPulses(shot):
+    transTree = MDSplus.Tree('transport', shot)
+    try:
+        injNode = transTree.getNode('\\top.imp_inj.dt196.input_10')
         
-        if ipFiltG[i] > lastPeak:
-            lastPeak = ipFiltG[i]
-            lastInd = i
+        inj = injNode.data()
+        time = injNode.dim_of().data()
         
-        if lastPeak > 0 and ipFiltL[i] < -threshIp:
-            if time[i] - time[lastInd] < 0.06:
-                if len(pulseTimes) == 0 or time[lastInd] - pulseTimes[-1] > 0.05:
-                    pulseTimes.append(time[lastInd])
-                    lastPeak = -1
-                
-    return np.array(pulseTimes)
+        peaks = medfilt(inj, 5) - np.median(inj) > 0.1
+        
+        return time[np.diff(peaks*1) > 0]
+    except:
+        return np.array([])
+        
+    
+    
         
         
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
+    
     
     import readline
     import MDSplus
@@ -120,11 +97,10 @@ if __name__ == "__main__":
         1120106030,
         1120106031,
         1120106032
-        ]
+        ]     
         
     for shot in shotList:
-        magTree = MDSplus.Tree('magnetics', shot)
-        ipNode = magTree.getNode('\magnetics::ip')
         
         
-        print shot, findColdPulses(ipNode, 0.6, 1.4)
+        
+        print shot, findColdPulses(shot)
