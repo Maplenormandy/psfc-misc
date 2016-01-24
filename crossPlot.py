@@ -76,19 +76,24 @@ shotList = [
         1120106032
         ]
 
+shotList = range(1150728016, 1150728029)
+
 f, axarr = plt.subplots(5,5, sharex=True, sharey=True)
 
 k = 0
 for i in range(5):
     for j in range(5):
+        if (k >= len(shotList)):
+            break
+
         shot = shotList[k]
+        rfTree = MDSplus.Tree('rf', shot)
+        rfNode = rfTree.getNode('\\rf::rf_power_net')
 
         axarr[i,j].plot(rfNode.dim_of().data(), rfNode.data())
         axarr[i,j].set_title(str(shot))
 
         k += 1
-        if (k > len(shotList)):
-            break
 
 f.subplots_adjust(hspace=0, wspace=0)
 

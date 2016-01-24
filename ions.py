@@ -202,14 +202,12 @@ for shot in shotList:
     rots = td.pro[1,:,:]
     rotsLaplacian = np.sqrt(np.sum(np.diff(rots, n=2, axis=0) ** 2, axis=0))
     
-    
     try:
         rotMeans = np.average(rots, axis=1, weights=td.pro[0,:,:])
     except:
         continue
     
-    #disagreeInd = np.all([rots[:,0] * rotMeans, rotMeans > 2.5], axis=0)
-    #print shot, td.time[disagreeInd]
+    rotsDev = (rots - np.array([rotMeans] * len(td.rho)).T) / td.perr[1,:,:]
     
     label = ''
     
@@ -252,7 +250,7 @@ for shot in shotList:
         """
 
         #ax5.scatter(td.rho, rotsLaplacian, c=col, marker=mark, label=label)
-        ax5.scatter(np.array([td.rho] * rots.shape[0]).flatten(), (rots - np.array([rotMeans] * len(td.rho)).T).flatten(), c=col, marker=mark, label=label)
+        ax5.scatter(np.array([td.rho] * rots.shape[0]).flatten(), (rotsDev).flatten(), c=col, marker=mark, label=label)
         
         #ax6.scatter(rotMeans, rots[:,0], c=col, marker=mark, label=label)
 
@@ -296,7 +294,7 @@ ax5.legend(loc='upper right')
 """
 
 ax5.set_title('Vtor fluctuation contribution over entire profile')
-ax5.set_ylabel('Vtor - Emissivity-averaged Vtor [kHz]')
+ax5.set_ylabel('Normalized Vtor - Emissivity-averaged Vtor [kHz]')
 ax5.set_xlabel('r/a')
 ax5.legend(loc='upper right')
 
