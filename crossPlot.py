@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 from pulseFinder import findColdPulses
 
-"""
 shotList = [
         1150901005,
         1150901006,
@@ -36,9 +35,8 @@ shotList = [
         1150903026,
         1150903028
         ]
+
 """
-
-
 shotList = [
         1120216006,
         1120216007,
@@ -75,8 +73,9 @@ shotList = [
         1120106031,
         1120106032
         ]
+"""
 
-shotList = range(1150728016, 1150728029)
+#shotList = range(1150728016, 1150728029)
 
 f, axarr = plt.subplots(5,5, sharex=True, sharey=True)
 

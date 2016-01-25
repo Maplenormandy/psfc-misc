@@ -225,6 +225,47 @@ class ThacoMap:
         self.fig.canvas.draw()
         plt.show(block=False)
 
+class HirexsrSpecMap:
+    def __init__(self, shot, tht=1):
+        if (shot != None):
+            self.shot = shot
+            self.specTree = MDSplus.Tree('spectroscopy', shot)
+
+            if (tht == 0):
+                self.tht = ''
+            else:
+                self.tht = str(tht)
+
+            self.thtNode = self.specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS' + self.tht + '.HELIKE.SPEC')
+
+        specNode = self.thtNode.getNode('SPECBR')
+        rbr = specNode.data()
+        rtime = specNode.dim_of(1).data()
+        
+        goodChans = (rbr[0,0,:] > 0).sum()
+        goodTimes = (rtime > 0).sum()
+        
+        self.time = rtime[:goodTimes]
+        self.br = rbr[:,:goodTimes,:goodChans]
+        
+        self.bg = np.percentile(self.br, 10, axis=0).T
+        
+        self.tp = centerScale(self.time)
+        self.cp = centerScale(range(self.br.shape[2]))
+        
+        self.tplot, self.cplot = np.meshgrid(self.tp, self.cp)
+        
+        self.fig = plt.figure(figsize=(22,4))
+        gs = gridspec.GridSpec(1,1)
+        self.ax1 = self.fig.add_subplot(gs[0])
+        self.cax1 = self.ax1.pcolormesh(self.tplot, self.cplot, self.bg, cmap='cubehelix')
+        self.fig.colorbar(self.cax1)
+
+        self.fig.suptitle('Shot ' + str(self.shot) + ' B_lambda background')
+
+        self.fig.canvas.draw()
+        plt.show(block=False)
+
 class ElecTraceMap:
     def __init__(self, shot):
         self.shot = shot
@@ -356,6 +397,14 @@ while True:
                 ThacoMap(int(toks[1]))
             elif len(toks) == 3:
                 ThacoMap(int(toks[1]), int(toks[2]))
+            else:
+                print "Syntax is 'thaco shotNumber [THT]'"
+                
+        if toks[0] == 'hirexsr_bg':
+            if len(toks) == 2:
+                HirexsrSpecMap(int(toks[1]))
+            elif len(toks) == 3:
+                HirexsrSpecMap(int(toks[1]), int(toks[2]))
             else:
                 print "Syntax is 'thaco shotNumber [THT]'"
 

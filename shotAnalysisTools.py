@@ -6,7 +6,7 @@ Created on Thu Jan 14 13:51:24 2016
 """
 
 import numpy as np
-from scipy.signal import medfilt
+from scipy.signal import medfilt, find_peaks_cwt
 import matplotlib.pyplot as plt
 
 
@@ -25,9 +25,20 @@ def findColdPulses(shot):
         return np.array([])
         
     
+def findSawteeth(time, te):
+    #elecTree = MDSplus.Tree('electrons', shot)
+    #teNode = elecTree.getNode('\ELECTRONS::TE_HRECE15')
+
+    # Use black magic to find sawteeth peaks. Usually they're around 0.0015s
+    # wide, but they can get shorter. Each frame is 5e-5s long. May want to
+    # consider using an asymmetric wavelet in the future
+    peaks = find_peaks_cwt(te, np.arange(9,35))
     
-        
-        
+    # Fix phasing by going to the local max
+    peakTimes = time[peaks]
+    plt.plot(time, te)
+    plt.scatter(time[peaks], te[peaks], c='r', marker='^')
+    
 
 if __name__ == "__main__":
     
@@ -97,10 +108,13 @@ if __name__ == "__main__":
         1120106030,
         1120106031,
         1120106032
-        ]     
+        ]
+     
+    findSawteeth(time, te)
+    #shotList = [1150901016]
+    #    
+    #for shot in shotList:
         
-    for shot in shotList:
         
         
-        
-        print shot, findColdPulses(shot)
+    #    print shot, findColdPulses(shot)
