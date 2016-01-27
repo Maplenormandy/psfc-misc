@@ -9,6 +9,26 @@ import numpy as np
 from scipy.signal import medfilt, find_peaks_cwt
 import matplotlib.pyplot as plt
 
+def rephaseToMax(peaks, data):
+    bounds = [0] * (len(peaks) + 1)
+    
+    for i in range(len(peaks)):
+        bounds[i] += peaks[i]
+        bounds[i+1] += peaks[i]
+    
+    for i in range(len(peaks)):
+        bounds[i] = bounds[i] / 2
+            
+    bounds[-1] = len(data)
+    
+    peaksPhased = [0] * len(peaks)
+    
+    for i in range(len(peaks)):
+        peaksPhased[i] = data[bounds[i]:bounds[i+1]].argmax() + bounds[i]
+        
+        
+    return peaksPhased
+
 
 def findColdPulses(shot):
     transTree = MDSplus.Tree('transport', shot)
@@ -26,18 +46,21 @@ def findColdPulses(shot):
         
     
 def findSawteeth(time, te):
+    """
+    Generally use TE_HRECE15
+    """
+    
     #elecTree = MDSplus.Tree('electrons', shot)
     #teNode = elecTree.getNode('\ELECTRONS::TE_HRECE15')
+    
+    teFilt = medfilt(te, 7)
 
     # Use black magic to find sawteeth peaks. Usually they're around 0.0015s
     # wide, but they can get shorter. Each frame is 5e-5s long. May want to
     # consider using an asymmetric wavelet in the future
-    peaks = find_peaks_cwt(te, np.arange(9,35))
+    peaks = find_peaks_cwt(teFilt, np.arange(5,35))
     
-    # Fix phasing by going to the local max
-    peakTimes = time[peaks]
-    plt.plot(time, te)
-    plt.scatter(time[peaks], te[peaks], c='r', marker='^')
+    return rephaseToMax(peaks, te)
     
 
 if __name__ == "__main__":
@@ -110,7 +133,7 @@ if __name__ == "__main__":
         1120106032
         ]
      
-    findSawteeth(time, te)
+    #findSawteeth(time, te)
     #shotList = [1150901016]
     #    
     #for shot in shotList:
