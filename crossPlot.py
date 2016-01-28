@@ -2,11 +2,14 @@ import numpy as np
 
 import readline
 import MDSplus
-
 import matplotlib.pyplot as plt
 
-from pulseFinder import findColdPulses
 
+import shotAnalysisTools as sat
+
+from multiprocessing import Pool
+
+"""
 shotList = [
         1150901005,
         1150901006,
@@ -35,8 +38,8 @@ shotList = [
         1150903026,
         1150903028
         ]
-
 """
+
 shotList = [
         1120216006,
         1120216007,
@@ -73,27 +76,96 @@ shotList = [
         1120106031,
         1120106032
         ]
+
+"""
+shotList = [
+        1120216006,
+        1120216007,
+        1120216025,
+        1120216026]
 """
 
 #shotList = range(1150728016, 1150728029)
 
-f, axarr = plt.subplots(5,5, sharex=True, sharey=True)
 
-k = 0
-for i in range(5):
-    for j in range(5):
-        if (k >= len(shotList)):
-            break
 
-        shot = shotList[k]
-        rfTree = MDSplus.Tree('rf', shot)
-        rfNode = rfTree.getNode('\\rf::rf_power_net')
 
-        axarr[i,j].plot(rfNode.dim_of().data(), rfNode.data())
-        axarr[i,j].set_title(str(shot))
+def dataFunc(args):
+    shot = args
+    pulses = sat.findColdPulses(shot)
+    
+    print shot, "data started"
 
-        k += 1
+    elecTree = MDSplus.Tree('electrons', shot)
+    teNode = elecTree.getNode('\gpc_t0')
+    
+    te = teNode.data()
+    time = teNode.dim_of().data()
+    peaks = sat.findSawteeth(time, te, 0.57, 1.43)
+    
+    print shot, "data done"
+    
+    return shot, te, time , peaks, pulses
 
-f.subplots_adjust(hspace=0, wspace=0)
+def plotFunc(args):
+    ax, (shot, te, time, peaks, pulses) = args
+    
+    medTime, medTe = sat.sawtoothMedian(peaks, time, te)
+    
+    ax.plot(medTime, medTe)
+    
+    ax.plot(time, te)
+    ax.scatter(time[peaks], te[peaks], c='r', marker='^')
 
-plt.show()
+    for p in pulses:
+        ax.axvline(x=p, c='r', ls='--')
+
+    ax.set_title(str(shot), y=0.8)
+
+if __name__ == '__main__':
+    nrows = min(8, len(shotList))
+    ncols = ((len(shotList) - 1) / nrows) + 1
+    f, axarr = plt.subplots(nrows,ncols, sharex=True, sharey=True)
+    
+    f.subplots_adjust(hspace=0, wspace=0)
+    
+    plt.draw()
+    
+    k = 0
+    
+    p = Pool(16)
+    
+    f.subplots_adjust(hspace=0, wspace=0)
+    
+    plotArgs = [0] * len(shotList)
+    axArgs = [0] * len(shotList)
+
+    for j in range(ncols):
+        for i in range(nrows):
+            if (k >= len(shotList)):
+                break
+            
+            shot = shotList[k]
+            
+            if ncols > 1:
+                ax = axarr[i,j]
+            else:
+                ax = axarr[i]
+                    
+            plotArgs[k] = shot
+            axArgs[k] = ax
+    
+            k += 1
+            
+
+    try:
+        dataArgs = p.map(dataFunc, plotArgs)
+        dataArgs = [(axArgs[i], dataArgs[i]) for i in range(len(shotList))]
+        map(plotFunc, dataArgs)
+    except:
+        p.terminate()
+        p.join()
+
+    print "done"
+    
+    plt.show()
