@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 import readline
 import MDSplus
 
+import shotAnalysisTools as sat
+
+import sys
+
 readline
 
 plt.close("all")
@@ -74,6 +78,34 @@ class HirexsrSpecData:
     def backgroundLevel(self):
         return np.percentile(self.br, 10, axis=0)
         
+
+class FrceceData:
+    def __init__(self, elecTree, numChannels, startChannel=1):
+        self.time = [None]*numChannels
+        self.temp = [None]*numChannels
+        self.rmid = [None]*numChannels
+
+        print "Loading ECE channels:",
+
+        for i in range(startChannel, numChannels+startChannel):
+            tempNode = elecTree.getNode('\ELECTRONS::TE_HRECE%02d' % i)
+            rmidNode = elecTree.getNode('\ELECTRONS::RMID_HRECE%02d' % i)
+
+            rtimes = rmidNode.dim_of().data()
+            ttimes = tempNode.dim_of().data()
+
+            self.time[i-startChannel] = ttimes
+            self.temp[i-startChannel] = tempNode.data()
+            self.rmid[i-startChannel] = np.interp(self.time[i-startChannel], rtimes, rmidNode.data().flatten())
+
+            print i,
+            sys.stdout.flush()
+
+        print "done"
+
+        self.time = np.array(self.time)
+        self.temp = np.array(self.temp)
+        self.rmid = np.array(self.rmid)
 
 class TciData:
     def __init__(self, tciNode):
@@ -209,41 +241,31 @@ shotList = [
         
         
         ]
-
-shotDict = {}
-
-#f0 = plt.figure()
-#ax0 = f0.add_axes([0.1, 0.1, 0.8, 0.8])
-
 """
+shotList = [
+        1150903021,
+        1150903023,
+        1150903022]
+"""
+
+labela='Pulse, Forward Rotation'
+labelb='Pulse, Reverse Rotation'
+labelc='No Pulse'
+
+f0 = plt.figure()
+ax0 = f0.add_axes([0.1, 0.1, 0.8, 0.8])
+
 f1 = plt.figure()
-f2 = plt.figure()
-f3 = plt.figure()
-f4 = plt.figure()
-
 ax1 = f1.add_axes([0.1, 0.1, 0.8, 0.8])
-ax2 = f2.add_axes([0.1, 0.1, 0.8, 0.8])
-ax3 = f3.add_axes([0.1, 0.1, 0.8, 0.8])
-ax4 = f4.add_axes([0.1, 0.1, 0.8, 0.8])
-"""
 
-f5 = plt.figure()
-ax5 = f5.add_axes([0.1, 0.1, 0.8, 0.8])
+f2 = plt.figure()
+ax2 = f1.add_axes([0.1, 0.1, 0.8, 0.8])
 
-#f6 = plt.figure()
-#ax6 = f6.add_axes([0.1, 0.1, 0.8, 0.8])
-
-labela = '1.2MW'
-labelb = '0.6MW'
-labelc = '0.0MW'
-
-rho1 = []
-rho2 = []
-rho3 = []
-rho4 = []
-
+ionTemps = [[], [], []]
+elecTemps = [[], [], []]
 
 for shot in shotList:
+    print shot
     
     #print shot
     try:
@@ -254,119 +276,127 @@ for shot in shotList:
         except:
             continue
 
+    elecTree = MDSplus.Tree('electrons', shot)
     
+    if shot < 1130000000:
+        fd = FrceceData(elecTree, 4, 13)
+    else:
+        fd = FrceceData(elecTree, 4, 21)
     
+    # TODO: replace with line-integrated data
     temps = td.pro[3,:,:]
-    tempMean = np.mean(temps, axis=0)
-    tempStd = np.std(temps, axis=0)
-    percentDev = tempStd / tempMean
-    
-    
     rots = td.pro[1,:,:]
-    rotsLaplacian = np.sqrt(np.sum(np.diff(rots, n=2, axis=0) ** 2, axis=0))
+    
+    pulses = sat.findColdPulses(shot)
+    
+    tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS:NL_04')
+    dens = tciNode.data()
+    dtime = tciNode.dim_of().data()
     
     try:
         rotMeans = np.average(rots, axis=1, weights=td.pro[0,:,:])
+        #tempMeans = np.average(rots, axis=1, weights=td.pro[0,:,:])
     except:
         continue
     
-    rotsDev = (rots - np.array([rotMeans] * len(td.rho)).T) / td.perr[1,:,:]
-    
     label = ''
     
-    if rfMed[0] > 0.9:
-        mark = '*'
-        col = 'r'
-        label=labela
-        labela = ''
-    elif rfMed[0] > 0.3:
-        mark = '^'
-        col = 'g'
-        label=labelb
-        labelb = ''
-    else:
-        mark = 'o'
-        col = 'b'
-        label=labelc
-        labelc = ''
+    times = np.linspace(0.6, 1.4, 17)
     
+    afterPulse = False
     
-    
-    #if tempMean[0] > 0 and tempMean[12] > 0:
-    if True:
-        #ax0.scatter(tempMean, percentDev, c=col, marker=mark, label=label)
+    for p in times:
+        if afterPulse:
+            afterPulse = False
+            continue
+        
+        pdens = dens[np.searchsorted(dtime, p)]
+        
+        # Need to move since HIREXSR times are the middle of the collection times
+        pulseFrame = np.searchsorted(td.time, p-0.01)
+        
+        if pulseFrame >= len(td.time):
+            continue
         
         
-        """
-        idx1 = 0
-        rho1.append(td.rho[idx1])
-        idx2 = (np.abs(td.rho-0.03)).argmin()
-        rho2.append(td.rho[idx2])
-        idx3 = (np.abs(td.rho-0.12)).argmin()
-        rho3.append(td.rho[idx3])
-        idx4 = (np.abs(td.rho-0.5)).argmin()
-        rho4.append(td.rho[idx4])
-        ax1.scatter(tempMean[idx1], percentDev[idx1], c=col, marker=mark, label=label)
-        ax2.scatter(tempMean[idx2], percentDev[idx2], c=col, marker=mark, label=label)
-        ax3.scatter(tempMean[idx3], percentDev[idx3], c=col, marker=mark, label=label)
-        ax4.scatter(tempMean[idx4], percentDev[idx4], c=col, marker=mark, label=label)
-        """
-
-        #ax5.scatter(td.rho, rotsLaplacian, c=col, marker=mark, label=label)
-        #ax5.scatter(np.array([td.rho] * rots.shape[0]).flatten(), (rotsDev).flatten(), c=col, marker=mark, label=label)
+            
+        preFrame = np.searchsorted(td.time, p-0.03)
+        postFrame = np.searchsorted(td.time, p+0.05)
         
-        #ax6.scatter(rotMeans, rots[:,0], c=col, marker=mark, label=label)
+        if preFrame == pulseFrame:
+            continue
+        
+        if postFrame >= len(td.time):
+            continue
+        
+        maxTempBefore = np.percentile(temps[preFrame:pulseFrame,:], 95)
+        maxTempAfter = np.percentile(temps[pulseFrame:postFrame,:], 95)
+        #maxTempBefore = np.max(temps[preFrame:pulseFrame,:])
+        #maxTempAfter = np.max(temps[pulseFrame:postFrame,:])
+        
+        tePulseFrame = np.searchsorted(fd.time[0], p)
+        
+        tePreFrame = np.searchsorted(fd.time[0], p-0.02)
+        tePostFrame = np.searchsorted(fd.time[0], p+0.04)
+        
+        maxTeBefore = np.percentile(fd.temp[:,tePreFrame:tePulseFrame], 99)
+        maxTeAfter = np.percentile(fd.temp[:,tePulseFrame:tePostFrame], 99)
+        #maxTeBefore = np.max(te[tePreFrame:tePulseFrame])
+        #maxTeAfter = np.max(te[tePulseFrame:tePostFrame])
+        
+        if np.any(np.abs(pulses - p) < 0.01):
+            afterPulse = True
+            if rotMeans[pulseFrame] > 0:
+                mark = '4'
+                col = 'r'
+                label=labela
+                labela = ''
+                
+                ionTemps[0].append(maxTempAfter - maxTempBefore)
+                elecTemps[0].append(maxTeAfter - maxTeBefore)
+            else:
+                mark = '3'
+                col = 'g'
+                label=labelb
+                labelb = ''
+                
+                ionTemps[1].append(maxTempAfter - maxTempBefore)
+                elecTemps[1].append(maxTeAfter - maxTeBefore)
+        else:
+            mark = '.'
+            col = 'b'
+            label=labelc
+            labelc=''
+        
+            ionTemps[2].append(maxTempAfter - maxTempBefore)
+            elecTemps[2].append(maxTeAfter - maxTeBefore)
 
-"""
-ax0.set_title('% RMS Ti Deviation from mean, whole profile')
-ax0.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
-ax0.set_xlabel('Mean[Ti] [keV]')
-ax0.legend(loc='upper left')
-"""
+                
+        
+        ax0.scatter(pdens, maxTempAfter - maxTempBefore, c=col, marker=mark, label=label)
+        
+        ax1.scatter(pdens, maxTeAfter - maxTeBefore, c=col, marker=mark, label=label)
+        
+        ax2.scatter(maxTeAfter - maxTeBefore, maxTempAfter - maxTempBefore, c=col, marker=mark, label=label)
 
-"""
-ax1.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho1)))
-ax2.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho2)))
-ax3.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho3)))
-ax4.set_title('% RMS Ti Deviation from mean, r/a=' + str(np.mean(rho4)))
+ax0.set_title('Ion Pulse 95th Percentile')
+ax0.set_ylabel('Post-Pulse Ti - Pre-Pulse Ti [KeV]')
+ax0.set_xlabel('TCI nl_04 [m^-3]')
+ax0.legend(loc='upper right')
 
-ax1.set_xlabel('Mean[Ti] [keV]')
-ax2.set_xlabel('Mean[Ti] [keV]')
-ax3.set_xlabel('Mean[Ti] [keV]')
-ax4.set_xlabel('Mean[Ti] [keV]')
+ax0.axhline(0)
 
-#ax1.set_ylim([0.02, 0.21])
-#ax2.set_ylim([0.02, 0.21])
+ax1.set_title('Electron Pulse, 99th Percentile')
+ax1.set_ylabel('Post-Pulse Te - Pre-Pulse Te [KeV]')
+ax1.set_xlabel('TCI nl_04 [m^-3]')
+ax1.legend(loc='upper right')
 
-ax1.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
-ax2.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
-ax3.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
-ax4.set_ylabel('RMS(Ti - Mean[Ti]) / Mean[Ti]')
+ax1.axhline(0)
 
-ax1.legend(loc='upper left')
-ax2.legend(loc='upper left')
-ax3.legend(loc='upper left')
-ax4.legend(loc='upper left')
-"""
 
-"""
-ax5.set_title('RMS Vtor second derivative')
-ax5.set_ylabel('RMS(d^2/dx^2[Vtor]) [kHz]')
-ax5.set_xlabel('r/a')
-ax5.legend(loc='upper right')
-"""
-
-ax5.set_title('Vtor fluctuation contribution over entire profile')
-ax5.set_ylabel('Normalized Vtor - Emissivity-averaged Vtor [kHz]')
-ax5.set_xlabel('r/a')
-ax5.legend(loc='upper right')
-
-"""
-ax6.plot([-5, 15], [-5, 15], 'r-')
-ax6.set_title('Noise in Vtor')
-ax6.set_ylabel('Core Vtor [kHz]')
-ax6.set_xlabel('Emissivity-Averaged Vtor [kHz]')
-ax6.legend(loc='upper left')
-"""
+ax2.set_title('Electron Pulse, 99th Percentile')
+ax2.set_ylabel('Post-Pulse Te - Pre-Pulse Te [KeV]')
+ax2.set_xlabel('TCI nl_04 [m^-3]')
+ax2.legend(loc='upper right')
 
 plt.show()
