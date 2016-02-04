@@ -46,6 +46,13 @@ class ThacoData:
         self.rho = rrho[0,:] # Assume unchanging rho bins
         self.pro = rpro[:,:goodTimes,:len(self.rho)]
         self.perr = rperr[:,:goodTimes,:len(self.rho)]
+        
+    def bisplTiFit(self):
+        tgrid, rgrid = np.meshgrid(self.time, self.rho)
+        for i in range(len(self.time)):
+        btck = bisplrep(tgrid.flatten(), rgrid.flatten(), td.pro[3,:,:].T.flatten(), \
+                         w = 1.0 / td.perr[3,:,:].flatten(), s=len(tgrid.flatten())**1.3, \
+                         kx = 3, ky = 3)
 
 #td = ThacoData(None, 1150901020, 1)
 
@@ -79,6 +86,7 @@ shotList = [
         ]
 shotDict = {}
 
+"""
 for shot in shotList:
     print shot
     td = ThacoData(None, shot, 1)
@@ -91,8 +99,8 @@ for shot in shotList:
     print td.pro.shape, td.time.shape, td.rho.shape
 
 sio.savemat('mp793shots.mat', shotDict)
-
 """
+
 # Get B-Spline fit
 tgrid, rgrid = np.meshgrid(td.time, td.rho)
 btck = bisplrep(tgrid.flatten(), rgrid.flatten(), td.pro[3,:,:].T.flatten(), \
@@ -133,4 +141,3 @@ plt.show()
 print "Knot Vector:", stck[0]
 print "B-Spline Coefs:", stck[1]
 print "Degree:", stck[2]
-"""

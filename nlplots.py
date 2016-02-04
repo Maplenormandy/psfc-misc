@@ -116,7 +116,7 @@ class TimePlots:
         plt.show(block=False)
 
     def timeTrace(self, i, time, data, ylabel):
-        self.axes[i].plot(time, data)
+        self.axes[i].plot(time, data, linestyle='-', marker='.')
         self.axes[i].set_ylabel(ylabel)
 
     def multiTimeTrace(self, i, time, rhoFlat, data, ylabel, reverse=True):
@@ -130,14 +130,14 @@ class TimePlots:
         for j in range(len(rhoFlat)):
             if len(time.shape) > 1:
                 if (data.shape[0] < data.shape[1]):
-                    self.axes[i].plot(time[j,:], data[j,:], c=rhoColor[j])
+                    self.axes[i].plot(time[j,:], data[j,:], c=rhoColor[j], linestyle='-', marker='.')
                 else:
-                    self.axes[i].plot(time[:,j], data[:,j], c=rhoColor[j])
+                    self.axes[i].plot(time[:,j], data[:,j], c=rhoColor[j], linestyle='-', marker='.')
             else:
                 if (data.shape[0] < data.shape[1]):
-                    self.axes[i].plot(time, data[j,:], c=rhoColor[j])
+                    self.axes[i].plot(time, data[j,:], c=rhoColor[j], linestyle='-', marker='.')
                 else:
-                    self.axes[i].plot(time, data[:,j], c=rhoColor[j])
+                    self.axes[i].plot(time, data[:,j], c=rhoColor[j], linestyle='-', marker='.')
 
         self.axes[i].set_ylabel(ylabel)
 

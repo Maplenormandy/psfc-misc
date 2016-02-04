@@ -230,7 +230,7 @@ shotList = [
         1120106017,
         1120106020,
         1120106021,
-        1120106022,
+        #1120106022,
         1120106025,
         1120106026,
         1120106027,
@@ -251,6 +251,11 @@ shotList = [
 labela='Pulse, Forward Rotation'
 labelb='Pulse, Reverse Rotation'
 labelc='No Pulse'
+
+labela='0.6 MA'
+labelb='0.8 MA'
+labelc='1.1 MA'
+labeld='Control'
 
 f0 = plt.figure()
 ax0 = f0.add_axes([0.1, 0.1, 0.8, 0.8])
@@ -305,6 +310,12 @@ for shot in shotList:
     
     afterPulse = False
     
+    magTree = MDSplus.Tree('magnetics', shot)
+    ipNode = magTree.getNode('\magnetics::ip')
+    ipTime = ipNode.dim_of().data()
+    ip = ipNode.data()
+        
+    
     for p in times:
         if afterPulse:
             afterPulse = False
@@ -344,6 +355,9 @@ for shot in shotList:
         #maxTeBefore = np.max(te[tePreFrame:tePulseFrame])
         #maxTeAfter = np.max(te[tePulseFrame:tePostFrame])
         
+        
+        
+        """
         if np.any(np.abs(pulses - p) < 0.01):
             afterPulse = True
             if rotMeans[pulseFrame] > 0:
@@ -370,7 +384,32 @@ for shot in shotList:
         
             ionTemps[2].append(maxTempAfter - maxTempBefore)
             elecTemps[2].append(maxTeAfter - maxTeBefore)
-
+        """
+        
+        pIp = ip[np.searchsorted(ipTime, p)]
+        
+        if np.any(np.abs(pulses - p) < 0.01):
+            afterPulse = True
+            if pIp > -7e5:
+                mark = 'x'
+                col = 'r'
+                label=labela
+                labela = ''
+            elif pIp > -1e6:
+                mark = 'x'
+                col = 'g'
+                label=labelb
+                labelb = ''
+            else:
+                mark = 'x'
+                col = 'm'
+                label=labelc
+                labelc = ''
+        else:
+            mark = '.'
+            col = 'b'
+            label=labeld
+            labeld=''
                 
         
         ax0.scatter(pdens, maxTempAfter - maxTempBefore, c=col, marker=mark, label=label)

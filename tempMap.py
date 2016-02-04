@@ -73,7 +73,7 @@ class FrceceMap:
             sys.stdout.flush()
 
 
-        print "done"
+        print "done, v2"
 
         self.times[numChannels] = self.times[numChannels-1]
 
@@ -82,16 +82,16 @@ class FrceceMap:
         self.rmids = np.array(self.rmids)
 
         tmeans = self.temps.mean(1, keepdims = True)
-        tmeans[18] = (2*tmeans[17]+1*tmeans[20])/3
-        tmeans[19] = (1*tmeans[17]+2*tmeans[20])/3
+        #tmeans[18] = (2*tmeans[17]+1*tmeans[20])/3
+        #tmeans[19] = (1*tmeans[17]+2*tmeans[20])/3
 
         rmeans = self.rmids.mean(1)
         prof = fitProfile(rmeans[5:], tmeans.flatten()[5:])
         print "Gaussian fit params:", prof[1], prof[2], prof[3]
 
         self.tempPlot = (self.temps - tmeans)
-        self.tempPlot[18].fill(0)
-        self.tempPlot[19].fill(0)
+        #self.tempPlot[18].fill(0)
+        #self.tempPlot[19].fill(0)
 
         self.rmidPlot = np.zeros(self.times.shape)
 
@@ -145,8 +145,8 @@ class FrceceMap:
             newInd[1] -= 2
 
         tmeans = self.temps[:,newInd[0]:newInd[1]].mean(1, keepdims=True)
-        tmeans[18] = (2*tmeans[17]+1*tmeans[20])/3
-        tmeans[19] = (1*tmeans[17]+2*tmeans[20])/3
+        #tmeans[18] = (2*tmeans[17]+1*tmeans[20])/3
+        #tmeans[19] = (1*tmeans[17]+2*tmeans[20])/3
 
 
         self.axTpro.clear()
@@ -160,8 +160,8 @@ class FrceceMap:
         self.axTpro.plot(prof[0](rline), rline)
 
         self.tempPlot[:,newInd[0]:newInd[1]] = (self.temps[:,newInd[0]:newInd[1]] - tmeans)
-        self.tempPlot[18].fill(0)
-        self.tempPlot[19].fill(0)
+        #self.tempPlot[18].fill(0)
+        #self.tempPlot[19].fill(0)
         self.caxTmap.set_array(self.tempPlot.ravel())
 
         #norm = colors.SymLogNorm(linthresh = prof[3]/20, vmin = -prof[3]/4, vmax = prof[3]/4)
@@ -241,20 +241,20 @@ class HirexsrSpecMap:
         specNode = self.thtNode.getNode('SPECBR')
         rbr = specNode.data()
         rtime = specNode.dim_of(1).data()
-        
+
         goodChans = (rbr[0,0,:] > 0).sum()
         goodTimes = (rtime > 0).sum()
-        
+
         self.time = rtime[:goodTimes]
         self.br = rbr[:,:goodTimes,:goodChans]
-        
+
         self.bg = np.percentile(self.br, 10, axis=0).T
-        
+
         self.tp = centerScale(self.time)
         self.cp = centerScale(range(self.br.shape[2]))
-        
+
         self.tplot, self.cplot = np.meshgrid(self.tp, self.cp)
-        
+
         self.fig = plt.figure(figsize=(22,4))
         gs = gridspec.GridSpec(1,1)
         self.ax1 = self.fig.add_subplot(gs[0])
@@ -399,7 +399,7 @@ while True:
                 ThacoMap(int(toks[1]), int(toks[2]))
             else:
                 print "Syntax is 'thaco shotNumber [THT]'"
-                
+
         if toks[0] == 'hirexsr_bg':
             if len(toks) == 2:
                 HirexsrSpecMap(int(toks[1]))
