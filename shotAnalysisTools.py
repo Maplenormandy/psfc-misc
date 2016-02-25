@@ -38,7 +38,52 @@ def rephaseToMax(peaks, data, indMin, indMax):
     #peaksPhased =     
         
     return filter(lambda x: x > 0, peaksPhased)
+    
+def rephaseToMin(peaks, data, indMin, indMax):
+    bounds = [0] * (len(peaks) + 1)
+    
+    for i in range(len(peaks)):
+        bounds[i] += peaks[i]
+        bounds[i+1] += peaks[i]
+    
+    for i in range(len(peaks)):
+        bounds[i] = bounds[i] / 2
+            
+    bounds[0] = indMin
+    bounds[-1] = indMax
+    
+    peaksPhased = [0] * len(peaks)
+    
+    for i in range(len(peaks)):
+        peaksPhased[i] = data[bounds[i]:bounds[i+1]].argmin() + bounds[i]
+        # Reject values that end up on one of the boundaries
+        if peaksPhased[i] - bounds[i] < 4 or  bounds[i+1]-peaksPhased[i] < 4:
+            peaksPhased[i] = -1
+    
+    #peaksPhased =     
+        
+    return filter(lambda x: x > 0, peaksPhased)
 
+# Note that while the array is called "peaks", they're actually troughs
+def findPeakCrest(peaks, data):
+    crests = [0] * len(peaks)
+    
+    for i in range(len(peaks)):
+        maxVal = data[peaks[i]]
+        #print maxVal
+        maxInd = peaks[i]
+        for k in range(1,10):
+            #print data[peaks[i]-k]
+            if data[peaks[i]-k] > maxVal:
+                maxInd = peaks[i]-k
+                maxVal = data[peaks[i]-k]
+            else:
+                break
+            
+        crests[i] = maxInd
+        
+    return crests
+            
 
 def findColdPulses(shot):
     transTree = MDSplus.Tree('transport', shot)
@@ -71,11 +116,12 @@ def findSawteeth(time, te, tmin, tmax):
     # Use black magic to find sawteeth peaks. Usually they're around 0.0015s
     # wide, but they can get shorter. Each frame is 5e-5s long. May want to
     # consider using an asymmetric wavelet in the future
-    teDiff = -np.diff(te[indMin:indMax+1])
-    peaks = find_peaks_cwt(teDiff, np.arange(9,15))
+    teDiff = np.abs(np.diff(np.diff(te[indMin-1:indMax+1])))
+    #plt.plot(teDiff)
+    peaks = find_peaks_cwt(teDiff, np.arange(15,23))
     peaks = [p + indMin for p in peaks]
     
-    return rephaseToMax(peaks, te, indMin, indMax)
+    return rephaseToMin(peaks, te, indMin, indMax)
     #return peaks
     
 def sawtoothMedian(peaks, time, te):

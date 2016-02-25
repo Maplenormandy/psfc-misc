@@ -179,8 +179,21 @@ for j in range(ncols):
 
         shot = shotList[k]
         
+        
+        elecTree = MDSplus.Tree('electrons', shot)
+        tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS')
+        densNode = tciNode.getNode('nl_04')
+        
+        time = densNode.dim_of().data()
+        dens = densNode.data()
+        
+        minTime = np.searchsorted(time, 0.5)
+        maxTime = np.searchsorted(time, 1.4)
+        
+        
         magTree = MDSplus.Tree('magnetics', shot)
         ipNode = magTree.getNode('\magnetics::ip')        
+        
         
         try:
             td = ThacoData(None, shot, 1)
@@ -190,26 +203,26 @@ for j in range(ncols):
             except:
                 continue
             
-        maxRad = np.searchsorted(td.rho, 0.5)
-        minRad = np.searchsorted(td.rho, 0.3)
+        maxRad = np.searchsorted(td.rho, 0.7)
+        minRad = np.searchsorted(td.rho, 0.1)
         #coreTemp = simps(td.pro[1,:,:minRad]*td.rho[:minRad], x=np.sqrt(td.rho[:minRad]), axis=1)
         #midTemp = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
-        #outerTemp = simps(td.pro[1,:,maxRad:]*td.rho[maxRad:], x=np.sqrt(td.rho[maxRad:]), axis=1)
+        #outerTemp = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
         
-        outerTemp = np.max(td.pro[1,:,maxRad:], axis=1)
+        #outerTemp = np.median(td.pro[1,:,:], axis=1)
         
         #coreTemp = coreTemp - np.median(coreTemp)
-        outerTemp = outerTemp - np.median(outerTemp)
+        #outerTemp = outerTemp - np.median(outerTemp)
+        
+        #outerTemp = np.sum(td.pro[1,:,minRad:maxRad] * td.pro[1,:,minRad+1:maxRad+1] < 0, axis=1)
+        midRot = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
         
         pulses = sat.findColdPulses(shot)
         
-        if ncols > 1:
-            ax = axarr[i,j]
-        else:
-            ax = axarr[i]
+        
 
         #ax.plot(td.time, coreTemp)
-        ax.plot(td.time, outerTemp)
+        #ax.plot(td.time, midRot)
 
         #ax.plot(ipNode.dim_of().data(), ipNode.data())
         
@@ -222,7 +235,15 @@ for j in range(ncols):
                 ax.axvline(x=p, c='r', ls='--')
             else:
                 ax.axvline(x=p, c='g', ls='--')
-            
+        
+        
+        if ncols > 1:
+            ax = axarr[i,j]
+        else:
+            ax = axarr[i]
+        
+        ax.plot(time[minTime:maxTime], dens[minTime:maxTime])
+        
         ax.set_title(str(shot), y=0.8)
 
         k += 1

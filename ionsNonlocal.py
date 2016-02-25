@@ -345,6 +345,7 @@ for shot in shotList:
         #maxTempBefore = np.max(temps[preFrame:pulseFrame,:])
         #maxTempAfter = np.max(temps[pulseFrame:postFrame,:])
         
+
         tePulseFrame = np.searchsorted(fd.time[0], p)
         
         tePreFrame = np.searchsorted(fd.time[0], p-0.02)
@@ -355,9 +356,7 @@ for shot in shotList:
         #maxTeBefore = np.max(te[tePreFrame:tePulseFrame])
         #maxTeAfter = np.max(te[tePulseFrame:tePostFrame])
         
-        
-        
-        """
+
         if np.any(np.abs(pulses - p) < 0.01):
             afterPulse = True
             if rotMeans[pulseFrame] > 0:
@@ -384,6 +383,7 @@ for shot in shotList:
         
             ionTemps[2].append(maxTempAfter - maxTempBefore)
             elecTemps[2].append(maxTeAfter - maxTeBefore)
+            
         """
         
         pIp = ip[np.searchsorted(ipTime, p)]
@@ -410,7 +410,7 @@ for shot in shotList:
             col = 'b'
             label=labeld
             labeld=''
-                
+        """
         
         ax0.scatter(pdens, maxTempAfter - maxTempBefore, c=col, marker=mark, label=label)
         

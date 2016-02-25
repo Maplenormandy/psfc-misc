@@ -128,6 +128,8 @@ class ShotManager:
         self.magTree = MDSplus.Tree('magnetics', shot)
         self.anaTree = MDSplus.Tree('analysis', shot)
         self.rfTree = MDSplus.Tree('rf', shot)
+        
+        self.rmagxNode = self.anaTree.getNode('\\analysis::efit_aeqdsk:rmagx')
 
         if (tht == 0):
             self.tht = ''
@@ -141,12 +143,17 @@ class ShotManager:
 
         self.thacoData = ThacoData(self.thtNode)
         self.frceceData = FrceceData(self.elecTree, eceChannels)
-        self.tscData = ThomsonCoreData(self.yagNode)
+        try:
+            self.tscData = ThomsonCoreData(self.yagNode)
+        except:
+            pass
+        
         self.tciData = TciData(self.tciNode)
 
         self.ipNode = self.magTree.getNode('\magnetics::ip')
         self.q95Node = self.anaTree.getNode('\\analysis::efit_aeqdsk:qpsib')
         self.rfNode = self.rfTree.getNode('\\rf::rf_power_net')
+        self.btorNode = self.magTree.getNode('\magnetics::btor')
 
         ShotManager.allShots.append(self)
 
