@@ -136,7 +136,9 @@ def sawtoothMedian(peaks, time, te):
 
 if __name__ == "__main__":
     
-    
+    elecTree = MDSplus.Tree('electrons', shot)
+    teNode = elecTree.getNode('\ELECTRONS::TE_HRECE15')
+    print findSawteeth(teNode.dim_of().data(), teNode.data(), 0.5, 1.5)
     
     shotList = [
         1150901005,

@@ -42,7 +42,6 @@ class ThacoData:
         self.rho = rrho[0,:] # Assume unchanging rho bins
         self.pro = rpro[:,:goodTimes,:len(self.rho)]
         self.perr = rperr[:,:goodTimes,:len(self.rho)]
-
 """
 shotList = [
         1150901005,
@@ -70,11 +69,8 @@ shotList = [
         1150903024,
         1150903025,
         1150903026,
-        1150903028
-        ]
+        1150903028,
 
-
-shotList = [
         1120216006,
         1120216007,
         1120216008,
@@ -112,13 +108,21 @@ shotList = [
         ]
 """
 
+"""
+shotList = [
+        1120216004,
+        1120216004,
+]
+"""
+
+"""
 shotList = [
         1150901017,
         1150901020,
-        1150901021,
-        1150901022,
-        1150901023,
-        1150901024,
+        #1150901021,
+        #1150901022,
+        #1150901023,
+        #1150901024,
         1150903019,
         1150903021,
         1150903022,
@@ -159,9 +163,10 @@ shotList = [
         1120106030,
         1120106031,
         1120106032
-        
-        
+
+
         ]
+"""
 
 #shotList = range(1150728016, 1150728029)
 
@@ -178,23 +183,23 @@ for j in range(ncols):
             break
 
         shot = shotList[k]
-        
-        
+
+        """
         elecTree = MDSplus.Tree('electrons', shot)
         tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS')
         densNode = tciNode.getNode('nl_04')
-        
+
         time = densNode.dim_of().data()
         dens = densNode.data()
-        
+
         minTime = np.searchsorted(time, 0.5)
         maxTime = np.searchsorted(time, 1.4)
-        
-        
+
+
         magTree = MDSplus.Tree('magnetics', shot)
-        ipNode = magTree.getNode('\magnetics::ip')        
-        
-        
+        ipNode = magTree.getNode('\magnetics::ip')
+
+
         try:
             td = ThacoData(None, shot, 1)
         except:
@@ -202,48 +207,42 @@ for j in range(ncols):
                 td = ThacoData(None, shot, 0)
             except:
                 continue
-            
+
         maxRad = np.searchsorted(td.rho, 0.7)
         minRad = np.searchsorted(td.rho, 0.1)
         #coreTemp = simps(td.pro[1,:,:minRad]*td.rho[:minRad], x=np.sqrt(td.rho[:minRad]), axis=1)
         #midTemp = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
         #outerTemp = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
-        
+
         #outerTemp = np.median(td.pro[1,:,:], axis=1)
-        
+
         #coreTemp = coreTemp - np.median(coreTemp)
         #outerTemp = outerTemp - np.median(outerTemp)
-        
+
         #outerTemp = np.sum(td.pro[1,:,minRad:maxRad] * td.pro[1,:,minRad+1:maxRad+1] < 0, axis=1)
         midRot = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
-        
-        pulses = sat.findColdPulses(shot)
+        """
+
         
         
 
-        #ax.plot(td.time, coreTemp)
-        #ax.plot(td.time, midRot)
+        specTree = MDSplus.Tree('spectroscopy', shot)
+        rotNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.Z:VEL')
 
-        #ax.plot(ipNode.dim_of().data(), ipNode.data())
-        
-        for p in pulses:
-            pulseFrame = np.searchsorted(td.time, p-0.01)
-            if pulseFrame >= len(td.time):
-                continue
-            
-            if np.median(td.pro[1,pulseFrame,minRad:maxRad]) > 0:
-                ax.axvline(x=p, c='r', ls='--')
-            else:
-                ax.axvline(x=p, c='g', ls='--')
-        
-        
+
         if ncols > 1:
             ax = axarr[i,j]
         else:
             ax = axarr[i]
+
+        ax.plot(rotNode.dim_of().data(), rotNode.data()[0])
         
-        ax.plot(time[minTime:maxTime], dens[minTime:maxTime])
-        
+        pulses = sat.findColdPulses(shot)
+
+
+        for p in pulses:
+            ax.axvline(x=p, c='b', ls='--')
+
         ax.set_title(str(shot), y=0.8)
 
         k += 1

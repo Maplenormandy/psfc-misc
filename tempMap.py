@@ -191,11 +191,12 @@ class ThacoMap:
         else:
             self.tht = str(tht)
 
-        self.proNode = self.tree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS'
-                + self.tht + '.HELIKE.PROFILES.Z.PRO')
-        self.rhoNode = self.tree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS'
-                + self.tht + '.HELIKE.PROFILES.Z.RHO')
+        heNode = self.tree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS'
+                + self.tht + '.HELIKE.PROFILES.Z')
+        hyNode = self.tree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS'
+                + self.tht + '.HLIKE.PROFILES.LYA1')
 
+        """
         rpro = self.proNode.data()
         rrho = self.rhoNode.data()
         rtime = self.rhoNode.dim_of()
@@ -205,10 +206,64 @@ class ThacoMap:
         self.time = centerScale(rtime.data()[:goodTimes])
         self.rho = rrho[0,:] # Assume unchanging rho bins
         self.pro = rpro[:,:goodTimes,:len(self.rho)]
+        """
+        
+        heproNode = heNode.getNode('PRO')
+        herhoNode = heNode.getNode('RHO')
+        heperrNode = heNode.getNode('PROERR')
 
+        herpro = heproNode.data()
+        herrho = herhoNode.data()
+        herperr = heperrNode.data()
+        hertime = herhoNode.dim_of()
+
+        hegoodTimes = (hertime > 0).sum()
+
+        self.hetime = hertime.data()[:hegoodTimes]
+        self.herho = herrho[0,:] # Assume unchanging rho bins
+        self.hepro = herpro[:,:hegoodTimes,:len(self.herho)]
+        self.heperr = herperr[:,:hegoodTimes,:len(self.herho)]
+        
+        
+        hyproNode = hyNode.getNode('PRO')
+        hyrhoNode = hyNode.getNode('RHO')
+        hyperrNode = hyNode.getNode('PROERR')
+
+        hyrpro = hyproNode.data()
+        hyrrho = hyrhoNode.data()
+        hyrperr = hyperrNode.data()
+        hyrtime = hyrhoNode.dim_of()
+
+        hygoodTimes = (hyrtime > 0).sum()
+
+        self.hytime = hyrtime.data()[:hygoodTimes]
+        self.hyrho = hyrrho[0,:] # Assume unchanging rho bins
+        self.hypro = hyrpro[:,:hygoodTimes,:len(self.hyrho)]
+        self.hyperr = hyrperr[:,:hygoodTimes,:len(self.hyrho)]
+        
+        # Assume same times and rhos
+        self.time = self.hetime
+        self.rho = self.herho
+        
+        self.pro = np.copy(self.hepro)
+        self.perr = np.copy(self.heperr)
+        
+        
+        for j in range(self.hypro.shape[1]):
+            takingHy = False
+            for k in reversed(range(self.hypro.shape[2])):
+                if self.perr[3,j,k] > self.hyperr[3,j,k]:
+                    takingHy = True
+                    
+                if takingHy:
+                    self.pro[:,j,k] = self.hypro[:,j,k]
+                    self.perr[:,j,k] = self.hyperr[:,j,k]
+
+        
         self.rplot, self.tplot = np.meshgrid(self.rho, self.time)
         self.tiplot = self.pro[3,:,:-1]
         self.vtorplot = self.pro[1,:,:-1]
+        
 
         self.fig = plt.figure(figsize=(22,6))
         gs = gridspec.GridSpec(2,1)
@@ -219,7 +274,7 @@ class ThacoMap:
         self.fig.suptitle('Shot ' + str(self.shot) + ' Ion Temp, Toroidal Velocity')
 
         self.ax2 = self.fig.add_subplot(gs[1], sharex=self.ax1, sharey=self.ax1)
-        self.cax2 = self.ax2.pcolormesh(self.tplot, self.rplot, self.vtorplot, cmap='BrBG', vmin=-10, vmax=10)
+        self.cax2 = self.ax2.pcolormesh(self.tplot, self.rplot, self.vtorplot, cmap='BrBG', vmin=-20, vmax=20)
         self.fig.colorbar(self.cax2)
 
         self.fig.canvas.draw()

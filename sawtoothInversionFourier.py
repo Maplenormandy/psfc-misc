@@ -70,6 +70,7 @@ class ThacoData:
                     
 
 
+"""
 specTree = MDSplus.Tree('spectroscopy', 1120221032)
 heNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS1.HELIKE.PROFILES.Z')
 hyNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS1.HLIKE.PROFILES.LYA1')
@@ -85,6 +86,7 @@ saw = sat.findSawteeth(gpc.dim_of().data(), gpc.data(), 0.56, 1.51)
 sawtimes = gpc.dim_of().data()[saw]
 time = gpc.dim_of().data()
 te = gpc.data()
+"""
 
 """
 indMin = time.searchsorted(0.56)
@@ -119,103 +121,45 @@ def getPhaseVector(sawtimes, tbin, numBasis):
     ph0 = (t0 - sawtimes[i0-1]) / (sawtimes[i0] - sawtimes[i0-1])
     ph1 = (t1 - sawtimes[i1-1]) / (sawtimes[i1] - sawtimes[i1-1])
 
-    phBasis = np.linspace(0, 1, numBasis, False)
-    phBDiff = np.median(np.diff(phBasis))
-
-    ib0 = np.searchsorted(phBasis, ph0)
-    ib1 = np.searchsorted(phBasis, ph1)
+    
+    phVector = np.zeros(2*numBasis+1)
     
     # Fourier basis functions
-    
-    """  
-    # Quadratic Basis Functions
     # Note this assumes that the length of the window < half sawtooth period
-    if ib1 > ib0:
-        phVector = np.zeros(numBasis)
-        for i in range(ib0+1, ib1-1):
-            phVector[i] = 1.0
+    if ph1 > ph0:
+        phVector[0] = 2.0*(ph1-ph0)
         
-        d0 = (phBasis[ib0] - ph0) / phBDiff
-        phVector[ib0-1] = 0.5 * (d0 * d0)
-        phVector[ib0%numBasis] = 1.0 - 0.5 * ((1-d0) * (1-d0))
         
-        d1 = (phBasis[ib1-1] + phBDiff - ph1) / phBDiff
-        phVector[ib1-1] = 1.0 - 0.5 * (d1 * d1)
-        phVector[ib1%numBasis] = 0.5 * ((1-d1) * (1-d1))
     else:
-        phVector = np.ones(numBasis)
-        for i in range(ib1+1, ib0-1):
-            phVector[i] = 0.0
+        phVector[0] = 2.0+2.0*(ph1-ph0)
+
+    for i in range(numBasis):
+        n=i+1
+        phVector[2*i+1] = (-np.sin(2*ph0*n*np.pi) + np.sin(2*ph1*n*np.pi)) / n / np.pi * np.sinc(1.0*n/(numBasis+2))**0
+        phVector[2*i+2] = (np.cos(2*ph0*n*np.pi) - np.cos(2*ph1*n*np.pi)) / n / np.pi * np.sinc(1.0*n/(numBasis+2))**0
             
-        d0 = (phBasis[ib0-1] + phBDiff - ph0) / phBDiff
-        phVector[ib0-1] = 0.5 * (d0 * d0)
-        phVector[ib0%numBasis] = 1.0 - 0.5 * ((1-d0) * (1-d0))
-        
-        if ib1 >= len(phBasis):
-            d1 = (phBasis[ib1-1] + phBDiff - ph1) / phBDiff
-        else:
-            d1 = (phBasis[ib1] - ph1) / phBDiff
-        phVector[ib1-1] = 1.0 - 0.5 * (d1 * d1)
-        phVector[ib1%numBasis] = 0.5 * ((1-d1) * (1-d1))
-    """
-    
-    # Linear Basis Functions
-    if ib1 > ib0:
-        phVector = np.zeros(numBasis)
-        for i in range(ib0+1, ib1-1):
-            phVector[i] = 1.0
-        
-        d0 = (phBasis[ib0] - ph0) / phBDiff
-        if d0 >= 0.5:
-            phVector[ib0] = 1.5 - d0
-        else:
-            phVector[ib0] = 1.0
-            phVector[ib0-1] = 0.5 - d0
-            
-        d1 = (phBasis[ib1-1] + phBDiff - ph1) / phBDiff
-        if d1 > 0.5:
-            phVector[ib1-1] = 1.0
-            phVector[ib1%numBasis] = d1 - 0.5
-    else:
-        phVector = np.zeros(numBasis)
-        for i in range(0, ib1-1):
-            phVector[i] = 1.0
-        for i in range(ib0+1,numBasis):
-            phVector[i] = 1.0
-            
-        d0 = (phBasis[ib0-1] + phBDiff - ph0) / phBDiff
-        if d0 >= 0.5:
-            phVector[ib0%numBasis] = 1.5 - d0
-        else:
-            phVector[ib0%numBasis] = 1.0
-            phVector[ib0-1] = 0.5 - d0
-            
-        d1 = (phBasis[ib1] - ph1) / phBDiff
-        if d1 > 0.5:
-            phVector[ib1-1] = 1.0
-            phVector[ib1%numBasis] = d1 - 0.5
-        
-    """
-    # ZOH
-    if ib1 > ib0:
-        phVector = np.zeros(numBasis)
-        for i in range(ib0-1, ib1):
-            phVector[i] = 1.0
-    else:
-        phVector = np.ones(numBasis)
-        for i in range(ib1+1, ib0-1):
-            phVector[i] = 0.0
-    """    
-    phVector = phVector / np.sum(phVector)
     return phVector
 
+def transformEq(numPoints, coefs, r):
+    r=0.6
+    plotBasis = np.linspace(0,1,numPoints)
+    func = np.ones(numPoints) * coefs[0] * 0.5
+    m = len(coefs)/2
+    for i in range(m):
+        n=i+1
+        func += np.cos(2*n*np.pi*plotBasis)*coefs[2*i+1] * np.sinc(1.0*n/(m+1))**1 * r**n
+        func += np.sin(2*n*np.pi*plotBasis)*coefs[2*i+2] * np.sinc(1.0*n/(m+1))**1 * r**n
+        
+    return func
 
-numBasis = 8
-phBasis = np.linspace(0, 1, numBasis, False)
+numBasis = 10
 
 elecMeans = np.zeros(len(td.time))
 elecData = gpc.data()
 elecTime = gpc.dim_of().data()
+
+plotBasis = np.linspace(0,1,50)
+
 
 # Verification against electron data
 for i in range(len(td.time)):
@@ -231,7 +175,7 @@ yraw = [getPhaseVector(sawtimes, t, numBasis) for t in td.time]
 
 traw = []
 
-for k in range(len(td.rho)-5):
+for k in range(len(td.rho)):
     Araw = []
     braw = []
     xraw = []
@@ -243,20 +187,10 @@ for k in range(len(td.rho)-5):
             wraw.append(1.0 / (td.perr[3,i,k]**2))
     
     #wraw = np.diag(wraw)
-    AArr = np.dot(wraw, np.array(Araw))
-    bArr = np.dot(wraw, np.array(braw))
+    #AArr = np.dot(wraw, np.array(Araw))
+    #bArr = np.dot(wraw, np.array(braw))
     AArr = np.array(Araw)
     bArr = np.array(braw)
-    
-    diffCond = np.zeros(numBasis)
-    diffCond[0] = 2.0 / numBasis / numBasis
-    diffCond[1] = -1.0 / numBasis / numBasis
-    diffCond[-1] = -1.0 / numBasis / numBasis
-    diffCond = diffCond*0.01
-    for i in range(numBasis):
-        AArr = np.vstack((AArr, np.roll(diffCond, i).T))
-        
-    bArr = np.hstack((bArr, np.zeros(numBasis)))
     
     
     #wArr = np.diag(td.perr[3,:,3])
@@ -265,31 +199,24 @@ for k in range(len(td.rho)-5):
     #bArr = np.dot(wArr, bArr)
     
     xArr = lstsq(AArr, bArr)
-    traw.append(xArr[0])
+    vals = transformEq(50, xArr[0], 0.4)
+    traw.append(vals)
 
 
 plt.figure()
 
 plt.pcolor(np.array(traw), cmap='cubehelix')
 plt.colorbar()
-plt.xlabel('sawtooth fraction')
-plt.ylabel('r/a')
-plt.title('Ti')
 
-"""
+
 braw = []
 for i in range(len(yraw)):
     if yraw[i] != None:
         braw.append(elecMeans[i])
         
 bArr = np.array(braw)
-bArr = np.hstack((bArr, np.zeros(numBasis)))
 
 xArr = lstsq(AArr, bArr)         
 plt.figure()
-plt.plot(phBasis, np.array(traw[0]))
-plt.plot(phBasis, xArr[0])
-plt.xlabel('sawtooth fraction')
-plt.ylabel('temperature')
-plt.legend(['ion upsample','electron upsample (sim)'])
-"""
+plt.plot(np.array(traw[0]))
+plt.plot(transformEq(50, xArr[0], 0.4))
