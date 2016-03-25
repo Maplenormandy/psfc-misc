@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from matplotlib import gridspec
 import matplotlib.colors as colors
 from matplotlib.cm import ScalarMappable
@@ -11,6 +12,9 @@ import sys
 import traceback
 
 readline
+
+font = {'family': 'normal', 'size': 18}
+matplotlib.rc('font', **font)
 
 def fitProfile(rmid, temp):
     # Does a least squares fit of a quadratic on the log of the data, i.e. fit a gaussian curve
@@ -126,6 +130,7 @@ class FrceceMap:
         self.axTmap.set_title('Shot ' + str(self.shot) + ' Te Diff from Mean')
 
         self.axTpro.set_xlabel('avg Te')
+        self.axTpro.axes.get_yaxis().set_visible(False)
         self.axTpro.set_title('Time-Average Profile')
 
         self.fig.canvas.draw()

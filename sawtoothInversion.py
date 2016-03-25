@@ -7,6 +7,7 @@ Created on Mon Feb 22 20:06:23 2016
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 
 from scipy.linalg import lstsq
     
@@ -70,18 +71,23 @@ class ThacoData:
                     
 
 
-specTree = MDSplus.Tree('spectroscopy', 1120221032)
-heNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS1.HELIKE.PROFILES.Z')
-hyNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS1.HLIKE.PROFILES.LYA1')
+#specTree = MDSplus.Tree('spectroscopy', 1120221032)
+specTree = MDSplus.Tree('spectroscopy', 1120221032)#1120106032
+heNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS.HELIKE.PROFILES.Z')
+hyNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS.HLIKE.PROFILES.LYA1')
 
 td = ThacoData(heNode, hyNode)
 
 
-elecTree = MDSplus.Tree('electrons', 1120221032)
+#elecTree = MDSplus.Tree('electrons', 1120221032)
+elecTree = MDSplus.Tree('electrons', 1120221032)#1120106021
 gpc = elecTree.getNode('\gpc_t0')
 
 #0.58 - 1.49
 saw = sat.findSawteeth(gpc.dim_of().data(), gpc.data(), 0.56, 1.51)
+#oldSaw = saw
+#saw = np.linspace(0, 1, 45) * (saw[-1] - saw[0]) + saw[0]
+#saw = [int(s) for s in saw]
 sawtimes = gpc.dim_of().data()[saw]
 time = gpc.dim_of().data()
 te = gpc.data()
@@ -107,8 +113,8 @@ plt.ylabel('peak Te / growth time')
 
 
 def getPhaseVector(sawtimes, tbin, numBasis):
-    t0 = tbin - (0.006 - 0.003) / 2 + 0.006
-    t1 = tbin + (0.006 - 0.003) / 2 + 0.006
+    t0 = tbin - (0.006 - 0.003) / 2 + 0.003
+    t1 = tbin + (0.006 - 0.003) / 2 + 0.003
    
     if t0 < 0.57 or t1 > 1.49:
         return None
@@ -210,7 +216,7 @@ def getPhaseVector(sawtimes, tbin, numBasis):
     return phVector
 
 
-numBasis = 8
+numBasis = 12
 phBasis = np.linspace(0, 1, numBasis, False)
 
 elecMeans = np.zeros(len(td.time))
@@ -231,6 +237,8 @@ yraw = [getPhaseVector(sawtimes, t, numBasis) for t in td.time]
 
 traw = []
 
+
+
 for k in range(len(td.rho)-5):
     Araw = []
     braw = []
@@ -239,8 +247,9 @@ for k in range(len(td.rho)-5):
     for i in range(len(yraw)):
         if yraw[i] != None:
             Araw.append(yraw[i])
-            braw.append(td.pro[3,i,k])
-            wraw.append(1.0 / (td.perr[3,i,k]**2))
+            braw.append(td.pro[1,i,k])
+            wraw.append(1.0 / (td.perr[1,i,k]**2))
+            #wraw.append(1.0)
     
     #wraw = np.diag(wraw)
     AArr = np.dot(wraw, np.array(Araw))
@@ -252,7 +261,7 @@ for k in range(len(td.rho)-5):
     diffCond[0] = 2.0 / numBasis / numBasis
     diffCond[1] = -1.0 / numBasis / numBasis
     diffCond[-1] = -1.0 / numBasis / numBasis
-    diffCond = diffCond*0.01
+    diffCond = diffCond*1.0
     for i in range(numBasis):
         AArr = np.vstack((AArr, np.roll(diffCond, i).T))
         
@@ -268,15 +277,31 @@ for k in range(len(td.rho)-5):
     traw.append(xArr[0])
 
 
-plt.figure()
+def centerScale(vals):
+    """
+    Maps 1,2,3,4 -> 0.5,1.5,2.5,3.5,4.5
+    Only works for flat arrays
+    """
 
-plt.pcolor(np.array(traw), cmap='cubehelix')
-plt.colorbar()
+    newVals = np.append(vals, 2*vals[-1]-vals[-2])
+    valDiffs = np.ediff1d(newVals, to_end=0)
+    valDiffs[-1] = valDiffs[2]
+    newVals -= valDiffs / 2
+
+    return newVals
+    
+fracscale = centerScale(np.linspace(0, 1, numBasis))
+rhoscale = centerScale(np.linspace(0, 1, len(td.rho))[:-5])
+
+plt.figure()
+xp, yp = np.meshgrid(fracscale, rhoscale)
+plt.pcolor(xp, yp, np.array(traw), cmap='cubehelix')
+plt.colorbar(label='toroidal rotation rate [kHz]')
 plt.xlabel('sawtooth fraction')
 plt.ylabel('r/a')
 plt.title('Ti')
 
-"""
+
 braw = []
 for i in range(len(yraw)):
     if yraw[i] != None:
@@ -290,6 +315,5 @@ plt.figure()
 plt.plot(phBasis, np.array(traw[0]))
 plt.plot(phBasis, xArr[0])
 plt.xlabel('sawtooth fraction')
-plt.ylabel('temperature')
-plt.legend(['ion upsample','electron upsample (sim)'])
-"""
+plt.ylabel('temperature [keV]')
+plt.legend(['HIREX Ti upsample','GPC Te "upsample"'], loc='upper left')

@@ -108,7 +108,7 @@ def findSawteeth(time, te, tmin, tmax):
     #elecTree = MDSplus.Tree('electrons', shot)
     #teNode = elecTree.getNode('\ELECTRONS::TE_HRECE15')
     
-    #teFilt = medfilt(te, 7)
+    teFilt = medfilt(te, 7)
     
     indMin = time.searchsorted(tmin)
     indMax = time.searchsorted(tmax)+1
@@ -116,9 +116,9 @@ def findSawteeth(time, te, tmin, tmax):
     # Use black magic to find sawteeth peaks. Usually they're around 0.0015s
     # wide, but they can get shorter. Each frame is 5e-5s long. May want to
     # consider using an asymmetric wavelet in the future
-    teDiff = np.abs(np.diff(np.diff(te[indMin-1:indMax+1])))
+    teDiff = np.abs(np.diff(np.diff(teFilt[indMin-1:indMax+1])))
     #plt.plot(teDiff)
-    peaks = find_peaks_cwt(teDiff, np.arange(15,23))
+    peaks = find_peaks_cwt(teDiff, np.arange(7,23))
     peaks = [p + indMin for p in peaks]
     
     return rephaseToMin(peaks, te, indMin, indMax)

@@ -97,14 +97,14 @@ def trophyPlot(sm1, sm2):
     
 
     
-    axarr[0].plot(sm2.thacoData.time[til2:tir2], (ti2 - np.median(ti2)) / np.median(ti2), marker='.', label='"non-local"')
-    axarr[0].plot(sm1.thacoData.time[til1:tir1], (ti1 - np.median(ti1)) / np.median(ti1), marker='.', label='"local"')
+    axarr[0].plot(sm2.thacoData.time[til2:tir2], (ti2 - np.median(ti2)) / np.median(ti2) * 100, marker='.', label='"non-local"')
+    axarr[0].plot(sm1.thacoData.time[til1:tir1], (ti1 - np.median(ti1)) / np.median(ti1) * 100, marker='.', label='"local"')
     
     axarr[0].axvline(1.0, c='r', ls='--')
     axarr[0].axvline(1.2, c='r', ls='--')
     axarr[0].axvline(1.4, c='r', ls='--')
     
-    axarr[0].set_ylim(-0.1, 0.15)
+    axarr[0].set_ylim(-10, 15)
     
     
     
@@ -123,14 +123,14 @@ def trophyPlot(sm1, sm2):
     tet2, tes2 = sawtoothAverage(te2, eceTime2, st2)
     
     
-    axarr[1].plot(tet2, (tes2 - np.median(tes2)) / np.median(tes2), marker='.', label='"non-local"')
-    axarr[1].plot(tet1, (tes1 - np.median(tes1)) / np.median(tes1), marker='.', label='"local"')
+    axarr[1].plot(tet2, (tes2 - np.median(tes2)) / np.median(tes2) * 100, marker='.', label='"non-local"')
+    axarr[1].plot(tet1, (tes1 - np.median(tes1)) / np.median(tes1) * 100, marker='.', label='"local"')
     
     axarr[1].axvline(1.0, c='r', ls='--')
     axarr[1].axvline(1.2, c='r', ls='--')
     axarr[1].axvline(1.4, c='r', ls='--')
     
-    axarr[1].set_ylim(-0.1, 0.15)
+    axarr[1].set_ylim(-10, 15)
     
     axarr[2].plot(sm2.thacoData.time[til2:tir2], vt2, marker='.', label='"non-local"')
     axarr[2].plot(sm1.thacoData.time[til1:tir1], vt1, marker='.', label='"local"')
@@ -158,12 +158,12 @@ def trophyPlot(sm1, sm2):
     
     
     axarr[0].set_title('Ip = 0.8MA, Bt = 5.4T, r/a = 0.42', fontsize=14)
-    axarr[0].set_ylabel('% Ti Change')
-    axarr[1].set_ylabel('% Te Change (Sawtooth Median)')
+    axarr[0].set_ylabel('%$\Delta T_i$')
+    axarr[1].set_ylabel('%$\Delta T_e$')
     axarr[2].set_ylabel('$\omega_{torr}$')
     
-    axarr[1].legend(loc='upper right', 
-          ncol=3)
+    #axarr[1].legend(loc='upper right', 
+    #      ncol=3)
     
     axarr[2].set_xlabel('time [sec]')
     
@@ -173,9 +173,9 @@ def trophyPlot(sm1, sm2):
     
     #axarr[2].plot(sm1.tciData.time[3,:], ne1)
     #axarr[2].plot(sm2.tciData.time[3,:], ne2)
-
+"""
 sm1 = ShotManager(1120106012, 0, 16)
 sm2 = ShotManager(1120106020, 0, 16)
-
+"""
 plt.close("all")
 trophyPlot(sm1, sm2)
