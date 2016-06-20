@@ -225,7 +225,7 @@ for j in range(ncols):
 
         
         
-
+        
         specTree = MDSplus.Tree('spectroscopy', shot)
         rotNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.Z:VEL')
 

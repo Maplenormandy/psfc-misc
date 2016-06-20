@@ -51,6 +51,7 @@ class FrceceMap:
 
         self.shot = shot
         self.tree = MDSplus.Tree('electrons', shot)
+        self.anaTree = MDSplus.Tree('analysis', shot)
         self.numChannels = numChannels
 
         self.times = [None]*(numChannels+1)
@@ -59,6 +60,9 @@ class FrceceMap:
 
         self.tmeans = np.zeros(numChannels)
         self.rmeans = np.zeros(numChannels)
+
+        rmagxNode = self.anaTree.getNode('\\analysis::efit_aeqdsk:rmagx')
+        aoutNode = self.anaTree.getNode('\\analysis::efit_aeqdsk:aout')
 
         print "Loaded channels:",
 
@@ -72,12 +76,22 @@ class FrceceMap:
             self.times[i-1] = ttimes
             self.temps[i-1] = tempNode.data()[:-1]
             self.rmids[i-1] = np.interp(self.times[i-1], rtimes, rmidNode.data().flatten())
+            rmagxSampled = np.interp(self.times[i-1], rmagxNode.dim_of().data(), rmagxNode.data())
+            aoutSampled = np.interp(self.times[i-1], aoutNode.dim_of().data(), aoutNode.data())
+            self.rmids[i-1] = (self.rmids[i-1]*100 - rmagxSampled) / aoutSampled
+
+            if np.any(self.temps[i-1] < -1):
+                self.temps[i-1] = np.ones(self.temps[i-1].shape)
 
             print i,
             sys.stdout.flush()
 
 
         print "done, v2"
+
+
+
+
 
         self.times[numChannels] = self.times[numChannels-1]
 
@@ -106,7 +120,7 @@ class FrceceMap:
         self.rmidPlot[0,:] = 2*self.rmidPlot[1,:] - self.rmidPlot[2,:]
         self.rmidPlot[numChannels,:] = 2*self.rmidPlot[numChannels-1,:] - self.rmidPlot[numChannels-2,:]
 
-        self.fig = plt.figure(figsize=(22,4))
+        self.fig = plt.figure(figsize=(22,5))
         self.gs = gridspec.GridSpec(1,2, width_ratios=[5,1])
 
         self.axTmap = self.fig.add_subplot(self.gs[0])
@@ -121,17 +135,19 @@ class FrceceMap:
         norm = colors.SymLogNorm(linthresh = prof[3]/20, vmin = -prof[3]/4, vmax = prof[3]/4)
 
         self.caxTmap = self.axTmap.pcolormesh(self.times, self.rmidPlot, self.tempPlot, norm=norm, cmap='spectral')
-        self.axTmap.set_ylim([0.7, 0.95])
+        self.axTmap.set_ylim([0.15, 0.95])
         self.fig.colorbar(self.caxTmap)
 
         self.axTmap.callbacks.connect('xlim_changed', self.zoomFunc)
-        self.axTmap.set_xlabel('time')
-        self.axTmap.set_ylabel('Rmid')
-        self.axTmap.set_title('Shot ' + str(self.shot) + ' Te Diff from Mean')
+        self.axTmap.set_xlabel('Time [sec]')
+        self.axTmap.set_ylabel('r/a')
+        #self.axTmap.set_title('Shot ' + str(self.shot) + ' Te Diff from Mean')
+        self.axTmap.set_title('Te Diff from Mean [keV]')
 
         self.axTpro.set_xlabel('avg Te')
         self.axTpro.axes.get_yaxis().set_visible(False)
-        self.axTpro.set_title('Time-Average Profile')
+        self.fig.subplots_adjust(wspace=0)
+        #self.axTpro.set_title('Time-Avg Profile')
 
         self.fig.canvas.draw()
         plt.show(block=False)
@@ -187,7 +203,7 @@ class FrceceMap:
         self.fig.canvas.draw()
 
 class ThacoMap:
-    def __init__(self, shot, tht=1):
+    def __init__(self, shot, tht=1, line='Z'):
         self.shot = shot
         self.tree = MDSplus.Tree('spectroscopy', shot)
 
@@ -197,9 +213,11 @@ class ThacoMap:
             self.tht = str(tht)
 
         heNode = self.tree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS'
-                + self.tht + '.HELIKE.PROFILES.Z')
+                + self.tht + '.HELIKE.PROFILES.' + line)
+        """
         hyNode = self.tree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS'
                 + self.tht + '.HLIKE.PROFILES.LYA1')
+        """
 
         """
         rpro = self.proNode.data()
@@ -212,7 +230,7 @@ class ThacoMap:
         self.rho = rrho[0,:] # Assume unchanging rho bins
         self.pro = rpro[:,:goodTimes,:len(self.rho)]
         """
-        
+
         heproNode = heNode.getNode('PRO')
         herhoNode = heNode.getNode('RHO')
         heperrNode = heNode.getNode('PROERR')
@@ -228,8 +246,8 @@ class ThacoMap:
         self.herho = herrho[0,:] # Assume unchanging rho bins
         self.hepro = herpro[:,:hegoodTimes,:len(self.herho)]
         self.heperr = herperr[:,:hegoodTimes,:len(self.herho)]
-        
-        
+
+        """
         hyproNode = hyNode.getNode('PRO')
         hyrhoNode = hyNode.getNode('RHO')
         hyperrNode = hyNode.getNode('PROERR')
@@ -245,42 +263,57 @@ class ThacoMap:
         self.hyrho = hyrrho[0,:] # Assume unchanging rho bins
         self.hypro = hyrpro[:,:hygoodTimes,:len(self.hyrho)]
         self.hyperr = hyrperr[:,:hygoodTimes,:len(self.hyrho)]
-        
+        """
+
         # Assume same times and rhos
         self.time = self.hetime
         self.rho = self.herho
-        
+
         self.pro = np.copy(self.hepro)
         self.perr = np.copy(self.heperr)
-        
-        
+
+        """
         for j in range(self.hypro.shape[1]):
             takingHy = False
             for k in reversed(range(self.hypro.shape[2])):
                 if self.perr[3,j,k] > self.hyperr[3,j,k]:
                     takingHy = True
-                    
+
                 if takingHy:
                     self.pro[:,j,k] = self.hypro[:,j,k]
                     self.perr[:,j,k] = self.hyperr[:,j,k]
+        """
 
-        
-        self.rplot, self.tplot = np.meshgrid(self.rho, self.time)
+        self.rplot, self.tplot = np.meshgrid(np.sqrt(self.rho), self.time)
         self.tiplot = self.pro[3,:,:-1]
         self.vtorplot = self.pro[1,:,:-1]
-        
+
 
         self.fig = plt.figure(figsize=(22,6))
+        self.ax = self.fig.add_subplot(111)
         gs = gridspec.GridSpec(2,1)
         self.ax1 = self.fig.add_subplot(gs[0])
-        self.cax1 = self.ax1.pcolormesh(self.tplot, self.rplot, self.tiplot, cmap='cubehelix', vmin=0.3, vmax=1.9)
+        self.cax1 = self.ax1.pcolormesh(self.tplot, self.rplot, self.tiplot, cmap='cubehelix', vmin=0.3, vmax=3.0)
+        #self.cax1.ax.set_ylabel('Ti [keV]', rotation=270)
         self.fig.colorbar(self.cax1)
 
-        self.fig.suptitle('Shot ' + str(self.shot) + ' Ion Temp, Toroidal Velocity')
+        #self.fig.suptitle('Shot ' + str(self.shot) + ' Ion Temp [keV], Toroidal Velocity [kHz]')
+        self.ax1.set_title('Ion Temp [keV], Toroidal Velocity [kHz]')
 
         self.ax2 = self.fig.add_subplot(gs[1], sharex=self.ax1, sharey=self.ax1)
         self.cax2 = self.ax2.pcolormesh(self.tplot, self.rplot, self.vtorplot, cmap='BrBG', vmin=-20, vmax=20)
+        #self.cax2.ax.set_ylabel('$\omega_t$ [kHz]', rotation=270)
         self.fig.colorbar(self.cax2)
+
+        self.ax.spines['top'].set_color('none')
+        self.ax.spines['bottom'].set_color('none')
+        self.ax.spines['left'].set_color('none')
+        self.ax.spines['right'].set_color('none')
+        self.ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+        self.ax.set_ylabel('r/a')
+        self.ax2.set_xlabel('Time [sec]')
+
+        self.ax1.xaxis.set_visible(False)
 
         self.fig.canvas.draw()
         plt.show(block=False)
@@ -457,8 +490,10 @@ while True:
                 ThacoMap(int(toks[1]))
             elif len(toks) == 3:
                 ThacoMap(int(toks[1]), int(toks[2]))
+            elif len(toks) == 4:
+                ThacoMap(int(toks[1]), int(toks[2]), toks[3])
             else:
-                print "Syntax is 'thaco shotNumber [THT]'"
+                print "Syntax is 'thaco shotNumber [THT] [line]'"
 
         if toks[0] == 'hirexsr_bg':
             if len(toks) == 2:

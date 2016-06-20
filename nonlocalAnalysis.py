@@ -38,7 +38,7 @@ def centerScale(vals):
     return newVals
 
 class ThacoData:
-    def __init__(self, thtNode):
+    def __init__(self, thtNode, shot=None, tht=0, line='Z'):
         self.thtNode = thtNode
 
         proNode = thtNode.getNode('PRO')
@@ -55,10 +55,13 @@ class ThacoData:
         self.pro = rpro[:,:goodTimes,:len(self.rho)]
 
 class FrceceData:
-    def __init__(self, elecTree, numChannels):
+    def __init__(self, elecTree, numChannels, shot=None):
         self.time = [None]*numChannels
         self.temp = [None]*numChannels
         self.rmid = [None]*numChannels
+        
+        if elecTree == None:
+            elecTree = MDSplus.Tree('electrons', shot)
 
         print "Loading ECE channels:",
 
@@ -83,7 +86,11 @@ class FrceceData:
         self.rmid = np.array(self.rmid)
 
 class ThomsonCoreData:
-    def __init__(self, yagNode):
+    def __init__(self, yagNode, shot=None):
+        if yagNode == None:
+            elecTree = MDSplus.Tree('electrons', shot)
+            yagNode = elecTree.getNode('\ELECTRONS::TOP.YAG_NEW.RESULTS.PROFILES')
+            
         self.yagNode = yagNode
 
         densNode = self.yagNode.getNode('NE_RZ')
@@ -100,7 +107,11 @@ class ThomsonCoreData:
         self.time = np.array(rtime[goodTimes])
 
 class TciData:
-    def __init__(self, tciNode):
+    def __init__(self, tciNode, shot=None):
+        if tciNode == None:
+            elecTree = MDSplus.Tree('electrons', shot)
+            tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS')
+            
         self.tciNode = tciNode
 
         self.rmid  = self.tciNode.getNode('rad').data()
