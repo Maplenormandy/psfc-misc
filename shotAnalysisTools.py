@@ -64,6 +64,26 @@ def rephaseToMin(peaks, data, indMin, indMax):
         
     return filter(lambda x: x > 0, peaksPhased)
 
+def rephaseToNearbyMax(peaks, data, radius):
+    peaksPhased = [0] * len(peaks)
+    
+    for i in range(len(peaks)):
+        lbound = peaks[i]-radius
+        ubound = peaks[i]+radius
+        peaksPhased[i] = data[lbound:ubound+1].argmax() + lbound
+        
+    return peaksPhased
+
+def rephaseToNearbyMin(peaks, data, radius):
+    peaksPhased = [0] * len(peaks)
+    
+    for i in range(len(peaks)):
+        lbound = peaks[i]-radius
+        ubound = peaks[i]+radius
+        peaksPhased[i] = data[lbound:ubound+1].argmin() + lbound
+        
+    return peaksPhased
+
 # Note that while the array is called "peaks", they're actually troughs
 def findPeakCrest(peaks, data):
     crests = [0] * len(peaks)
@@ -100,7 +120,7 @@ def findColdPulses(shot):
         return np.array([])
         
     
-def findSawteeth(time, te, tmin, tmax):
+def findSawteethCwt(time, te, tmin, tmax):
     """
     Generally use GPC_T0
     """
@@ -133,6 +153,18 @@ def sawtoothMedian(peaks, time, te):
         newTimes[i] = np.median(time[peaks[i]:peaks[i+1]])
         
     return newTimes, newTemps
+
+def findSawteeth(time, te, tmin, tmax, sep=8, threshold=0.0):
+    indMin = time.searchsorted(tmin)-sep
+    indMax = time.searchsorted(tmax)+sep+1
+    
+    teDiff = (te[indMin+sep:indMax] - te[indMin:indMax-sep]) < threshold
+    teFront = np.diff(teDiff*1.0)
+    peaks = np.where(teFront > 0)[0]
+    peaks = [p + indMin + sep for p in peaks]
+    
+    return rephaseToNearbyMin(peaks, te, 4)
+    #return peaks
 
 if __name__ == "__main__":
     

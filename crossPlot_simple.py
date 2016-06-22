@@ -115,7 +115,6 @@ shotList = [
 ]
 """
 
-"""
 shotList = [
         1150901017,
         1150901020,
@@ -166,10 +165,10 @@ shotList = [
 
 
         ]
-"""
 
 #shotList = range(1150728016, 1150728029)
 
+shotList = [1160506007, 1150903021, 1160506008]
 
 nrows = min(8, len(shotList))
 ncols = ((len(shotList) - 1) / nrows) + 1
@@ -184,66 +183,26 @@ for j in range(ncols):
 
         shot = shotList[k]
 
-        """
-        elecTree = MDSplus.Tree('electrons', shot)
-        tciNode = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS')
-        densNode = tciNode.getNode('nl_04')
-
-        time = densNode.dim_of().data()
-        dens = densNode.data()
-
-        minTime = np.searchsorted(time, 0.5)
-        maxTime = np.searchsorted(time, 1.4)
-
-
-        magTree = MDSplus.Tree('magnetics', shot)
-        ipNode = magTree.getNode('\magnetics::ip')
-
-
-        try:
-            td = ThacoData(None, shot, 1)
-        except:
-            try:
-                td = ThacoData(None, shot, 0)
-            except:
-                continue
-
-        maxRad = np.searchsorted(td.rho, 0.7)
-        minRad = np.searchsorted(td.rho, 0.1)
-        #coreTemp = simps(td.pro[1,:,:minRad]*td.rho[:minRad], x=np.sqrt(td.rho[:minRad]), axis=1)
-        #midTemp = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
-        #outerTemp = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
-
-        #outerTemp = np.median(td.pro[1,:,:], axis=1)
-
-        #coreTemp = coreTemp - np.median(coreTemp)
-        #outerTemp = outerTemp - np.median(outerTemp)
-
-        #outerTemp = np.sum(td.pro[1,:,minRad:maxRad] * td.pro[1,:,minRad+1:maxRad+1] < 0, axis=1)
-        midRot = simps(td.pro[1,:,minRad:maxRad]*td.rho[minRad:maxRad], x=np.sqrt(td.rho[minRad:maxRad]), axis=1)
-        """
-
-        
-        
-        
-        specTree = MDSplus.Tree('spectroscopy', shot)
-        rotNode = specTree.getNode('\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.Z:VEL')
-
 
         if ncols > 1:
             ax = axarr[i,j]
         else:
             ax = axarr[i]
+            
+        electrons = MDSplus.Tree('electrons', shot)
+        gpc0 = electrons.getNode(r'\ELECTRONS::GPC2_TE0')
+        time = gpc0.dim_of().data()
+        te = gpc0.data()
 
-        ax.plot(rotNode.dim_of().data(), rotNode.data()[0])
-        
-        pulses = sat.findColdPulses(shot)
-
-
-        for p in pulses:
-            ax.axvline(x=p, c='b', ls='--')
-
-        ax.set_title(str(shot), y=0.8)
+        #ax.plot(rotNode.dim_of().data(), rotNode.data()[0])
+        peaks = sat.findSawteeth(time, te, 0.5, 1.5)
+        indMin = time.searchsorted(0.5)-8
+        indMax = time.searchsorted(1.5)+8+1
+        peaks2 = sat.rephaseToNearbyMax(peaks, te, 4)
+        #ax.plot(time, te)
+        #ax.scatter(time[peaks], te[peaks])
+        #ax.scatter(time[peaks2], te[peaks2])
+        ax.scatter(time[peaks[:-1]], np.diff(time[peaks]))
 
         k += 1
 
