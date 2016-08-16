@@ -12,6 +12,9 @@ import MDSplus
 
 import matplotlib.pyplot as plt
 
+import sys
+sys.path.append('/home/normandy/git/psfc-misc')
+
 import shotAnalysisTools as sat
 
 from scipy.stats import linregress
@@ -88,7 +91,7 @@ headers = ['Shot Number',
            'Ati min', 'Ati tt min']
     
 df = pd.DataFrame([], columns=headers)    
-    
+
 for shot in shotList:
     try:
         pulses = sat.findColdPulses(shot)

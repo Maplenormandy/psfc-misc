@@ -17,12 +17,7 @@ import scipy
 import readline
 import MDSplus
 
-import matplotlib.pyplot as plt
-
-import sys
-sys.path.append('/home/normandy/git/psfc-misc')
-
-import shotAnalysisTools as sat
+import ShotAnalysisTools as sat
 
 import copy
 
@@ -115,13 +110,10 @@ def sliceTeCrashPoints(p_Te, sawtimes):
 
 def fitTeBeforeCrash(p_Te, p_Te2, sawtimes):
     p = sliceTeCrashPoints(p_Te, sawtimes)
+    p2 = sliceTeCrashPoints(p_Te2, sawtimes)
     
-    try:
-        p2 = sliceTeCrashPoints(p_Te2, sawtimes)
-        
-        p.add_profile(p2)
-    except:
-        pass
+    p.add_profile(p2)
+    
     
     
     p.time_average()
@@ -135,7 +127,7 @@ def fitTeBeforeCrash(p_Te, p_Te2, sawtimes):
                     gptools.GammaJointPrior([1 + 1 * 5], [5])
                 )
     
-    p.find_gp_MAP_estimate(random_starts=2)
+    p.find_gp_MAP_estimate(random_starts=4)
     return p
 
 def fitTe(r, Te, err):
@@ -147,7 +139,7 @@ def fitTe(r, Te, err):
     gp0 = gptools.GaussianProcess(k0, use_hyper_deriv=True)
     gp0.add_data(r, Te, err_y = err)
     
-    gp0.optimize_hyperparameters(random_starts=2)
+    gp0.optimize_hyperparameters(random_starts=4)
     
     return gp0
 
@@ -160,27 +152,12 @@ def getTeFit(p_Te, p_Te2, gpc0time, gpc0te, t):
     tmin = gpc0time[peaks[0]]
     tmax = gpc0time[peaks[-1]]
     
-    r, Te, sTe = getTeRanges(p_Te, tmin, tmax)
+    r1, Te1, sTe1 = getTeRanges(p_Te, tmin, tmax)
+    r2, Te2, sTe2 = getTeRanges(p_Te2, tmin, tmax)
     
-    """
-    try:
-        r1, Te1, sTe1 = getTeRanges(p_Te, tmin, tmax)
-        try:
-            r2, Te2, sTe2 = getTeRanges(p_Te2, tmin, tmax)
-        except:
-            r = r1
-            Te = Te1
-            sTe = sTe1
-            
-        sTe = np.concatenate((sTe1, sTe2))
-        r = np.vstack((r1, r2))
-        Te = np.vstack((Te1, Te2))
-    except:
-        r, Te, sTe = getTeRanges(p_Te2, tmin, tmax)
-    """        
-    
-    
-    
+    sTe = np.concatenate((sTe1, sTe2))
+    r = np.vstack((r1, r2))
+    Te = np.vstack((Te1, Te2))
     
     gp0 = fitTe(r[:,0], Te[:,0], sTe)
     gp1 = fitTe(r[:,1], Te[:,1], sTe)
@@ -211,7 +188,7 @@ def fitNe(p_ne, t):
                     gptools.GammaJointPrior([1 + 1 * 5], [5])
                 )
     
-    print p.find_gp_MAP_estimate(random_starts=2)
+    print p.find_gp_MAP_estimate(random_starts=12)
     
     return p
     
@@ -257,9 +234,9 @@ class NustarProfile:
         qfpsi = scipy.interpolate.interp2d(psin, qt, qp)
         
         self.qfroa = lambda t: lambda roa: qfpsi(self.e.roa2psinorm(roa, t, each_t=True), t)            
-        magRf = self.e.getMagRSpline(kind='linear')
-        magaf = self.e.getAOutSpline(kind='linear')
-        self.epsfroa = lambda t: lambda roa: roa * magaf(t) / magRf(t)
+        self.magRf = self.e.getMagRSpline(kind='linear')
+        self.magaf = self.e.getAOutSpline(kind='linear')
+        self.epsfroa = lambda t: lambda roa: roa * self.magaf(t) / self.magRf(t)
         
     def fitNe(self, tnefits):
         self.tnefits = tnefits
@@ -311,110 +288,15 @@ class NustarProfile:
         self.eps = eps
         self.tfits = tfits
         
+    def calcMinTrace(self):
+        def unpack(f):
+            return lambda x: f(x)[0]
     
-# %% Temporary construction functions
-    
-def calcTraces(slf):
-    def unpack(f):
-        return lambda x: f(x)[0]
+        self.numinTrace = np.zeros(len(self.tfits))
+        self.xminTrace = np.zeros(len(self.tfits))        
+            
+        for j in range(len(self.tfits)):
+            res = op.minimize_scalar(unpack(self.collMin[j]), bounds=[0.1, 0.95], method='bounded')
+            self.numinTrace[j] = res.fun
+            self.xminTrace[j] = res.x
 
-    slf.numinTrace = np.zeros(len(slf.tfits))
-    slf.xminTrace = np.zeros(len(slf.tfits))        
-        
-    for j in range(len(slf.tfits)):
-        res = op.minimize_scalar(unpack(slf.collMin[j]), bounds=[0.2, 0.8], method='bounded')
-        slf.numinTrace[j] = res.fun
-        slf.xminTrace[j] = res.x
-        
-    
-    
-# %% Collisionality plot
-
-nustar = NustarProfile(1160609002, 0.4, 1.6)
-nustar.fitNe([0.91])
-nustar.evalProfile(np.array([0.91]))
-
-rho = np.linspace(0.1,0.9)
-plt.figure()
-plt.plot(rho, (nustar.neFit[0](rho)))
-#plt.plot(rho, (nustar.neFit[1](rho)))
-
-d0 = np.gradient(nustar.neFit[0](rho), np.median(np.diff(rho)))
-d1 = np.gradient(nustar.neFit[0](rho), np.median(np.diff(rho)))
-
-plt.figure()
-plt.plot(rho, (nustar.neFit[0](rho)/d0))
-#plt.plot(rho, (nustar.neFit[1](rho)/d1))
-
-#plt.plot(rho, (nustar.neFit[1](rho)))
-
-#plt.scatter(rtest, tetest)
-#plt.scatter(rtest2, tetest2, c='r')
-
-
-
-# %% Plot the fits
-
-
-#plt.errorbar(np.linspace(0,1), ne2, yerr=nestd2)
-
-#ne0 = np.array([ne(np.zeros(1)) for ne in nustar.neFit])
-plt.figure()
-#temin = np.array([te(np.zeros(1)) for te in nustar.TeMin])
-#temed = np.array([te(np.zeros(1)) for te in nustar.TeMed])
-#temax = np.array([te(np.zeros(1)) for te in nustar.TeMax])
-#plt.plot(nustar.tfits, temin)
-#plt.plot(nustar.tfits, temed)
-#plt.plot(nustar.tfits, temax)
-#plt.plot(nustar.tfits, ne0)
-j = np.argmin(np.abs(nustar.tfits - 0.86))
-plt.plot(np.linspace(0,1), nustar.collMed[0](np.linspace(0,1)), c='#0000ff', label='0.75s, SOC->LOC')
-plt.plot(np.linspace(0,1), nustar.collMin[0](np.linspace(0,1)), c='#000055')
-plt.plot(np.linspace(0,1), nustar.collMax[0](np.linspace(0,1)), c='#000055')
-j = np.argmin(np.abs(nustar.tfits - 1.25))
-plt.plot(np.linspace(0,1), nustar.collMed[j](np.linspace(0,1)), c='#ff5500', label='1.03s, LOC->SOC')
-plt.plot(np.linspace(0,1), nustar.collMin[j](np.linspace(0,1)), c='#553300')
-plt.plot(np.linspace(0,1), nustar.collMax[j](np.linspace(0,1)), c='#553300')
-
-plt.legend()
-
-
-# %% Min plots
-
-def unpack(f):
-        return lambda x: f(x)[0]
-
-xs = np.zeros(nustar.tfits.shape)
-funs = np.zeros(nustar.tfits.shape)
-
-for i in range(len(nustar.tfits)):
-    res = op.minimize_scalar(unpack(nustar.collMin[i]), bounds=[0.2, 0.8], method='bounded')
-    xs[i] = res.x
-    funs[i] = res.fun
-
-plt.figure()
-plt.plot(nustar.tfits, funs, label='min nu*')
-plt.plot(nustar.tfits, xs, label='argmin nu*')
-
-plt.vlines([0.86, 1.25], 0.0, 1.0, label='reversals')
-
-plt.legend()
-
-# %% ne0, te0, etc...
-
-plt.figure()
-ne0 = np.array([ne(0) for ne in nustar.neFit])
-plt.plot(nustar.tfits, ne0)
-
-"""
-plt.errorbar(np.linspace(0,1), Temean0, yerr=Testd0, c='b')
-plt.errorbar(np.linspace(0,1), Temean1, yerr=Testd1, c='g')
-plt.errorbar(np.linspace(0,1), Temean2, yerr=Testd2, c='r')
-
-plt.scatter(r1[:,0], Te1[:,0], c='b')
-plt.scatter(r2[:,0], Te2[:,0], c='b', marker='^')
-plt.scatter(r1[:,1], Te1[:,1], c='g')
-plt.scatter(r2[:,1], Te2[:,1], c='g', marker='^')
-plt.scatter(r1[:,2], Te1[:,2], c='r')
-plt.scatter(r2[:,2], Te2[:,2], c='r', marker='^')
-"""
