@@ -3,6 +3,7 @@ AllMapsOutput
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*.p
 
 # C extensions
 *.so

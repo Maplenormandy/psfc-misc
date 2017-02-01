@@ -73,11 +73,11 @@ axarr[1].set_xlabel('time [s]')
 plt.tight_layout()
 
 
-"""
+
 plt.figure()
 plt.errorbar(np.sqrt(td.rho[1:-4]), td.pro[1,37,1:-4], yerr=td.perr[1,37,1:-4])
 plt.errorbar(np.sqrt(td.rho[1:-4]), td.pro[1,41,1:-4], yerr=td.perr[1,41,1:-4])
 plt.errorbar(np.sqrt(td.rho[1:-4]), td.pro[1,45,1:-4], yerr=td.perr[1,45,1:-4])
-"""
+
 
 

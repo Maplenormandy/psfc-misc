@@ -17,7 +17,7 @@ import matplotlib
 
 readline
 
-font = {'family': 'normal', 'size': 24}
+font = {'family': 'normal', 'size': 18}
 matplotlib.rc('font', **font)
 
 class FrceceData:
