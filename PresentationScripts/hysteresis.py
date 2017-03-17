@@ -31,7 +31,7 @@ def plotBtHysteresis(shot):
     anaTree = MDSplus.Tree('analysis', shot)
     btorNode = magTree.getNode(r'\magnetics::btor')
     q95Node = anaTree.getNode(r'\ANALYSIS::EFIT_AEQDSK:QPSIB')
-    velNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.A:VEL')
+    velNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.W:VEL')
     
     rfTree = MDSplus.Tree('rf', shot)
     rfNode = rfTree.getNode(r'\rf::rf_power_net')
@@ -45,7 +45,7 @@ def plotBtHysteresis(shot):
     vhigh = np.searchsorted(vtime, 1.4)+2
     
     vtime = vtime[vlow:vhigh]
-    vdata = velNode.data()
+    vdata = velNode.data()[0]
     vdata = vdata[vlow:vhigh]
     
     magData = np.interp(vtime, btime, btorNode.data())
@@ -53,13 +53,14 @@ def plotBtHysteresis(shot):
     q95data = np.interp(vtime, q95Node.dim_of().data(), q95Node.data())
     rfData = np.interp(vtime, rfNode.dim_of().data(), rfNode.data())
     
-    #plt.plot(magData*nldata/0.48, vdata, label=str(shot), marker='.')
+    plt.plot(nlData, vdata, label=str(shot), marker='.')
+    #plt.plot(magData, vdata, label=str(shot), marker='.')
     #plt.plot(nlData*q95data, vdata, label=str(shot), marker='.')
-    #plt.xlabel('nl_04 * q95')
-    #plt.ylabel('vtor')
-    plt.plot(vtime, vdata, label=str(shot), marker='.')
-    plt.ylabel('A - vel [km/s]')
-    plt.xlabel('time [sec]')
+    plt.xlabel('ne')
+    plt.ylabel('vtor')
+    #plt.plot(vtime, vdata, label=str(shot), marker='.')
+    #plt.ylabel('A - vel [km/s]')
+    #plt.xlabel('time [sec]')
     #plt.plot(rfData, vdata, label=str(shot))
     
     
@@ -95,8 +96,8 @@ def plotBrightness(shot):
 
 # %% 0.8 MA
 plt.figure()
-plotBtHysteresis(1160907017)
-plotBtHysteresis(1160907006)
+plotBtHysteresis(1160506019)
+#plotBtHysteresis(1160512025)
 #plotBtHysteresis(1160506024)
 #plotBtHysteresis(1160506025)
 #plotBtHysteresis(1160506006)

@@ -330,9 +330,9 @@ def calcTraces(slf):
     
 # %% Collisionality plot
 
-nustar = NustarProfile(1160609002, 0.4, 1.6)
-nustar.fitNe([0.91])
-nustar.evalProfile(np.array([0.91]))
+nustar = NustarProfile(1160506015, 0.4, 1.6)
+nustar.fitNe([0.77, 1.01])
+nustar.evalProfile(np.array([0.77, 1.01]))
 
 rho = np.linspace(0.1,0.9)
 plt.figure()
@@ -367,14 +367,14 @@ plt.figure()
 #plt.plot(nustar.tfits, temed)
 #plt.plot(nustar.tfits, temax)
 #plt.plot(nustar.tfits, ne0)
-j = np.argmin(np.abs(nustar.tfits - 0.86))
-plt.plot(np.linspace(0,1), nustar.collMed[0](np.linspace(0,1)), c='#0000ff', label='0.75s, SOC->LOC')
-plt.plot(np.linspace(0,1), nustar.collMin[0](np.linspace(0,1)), c='#000055')
-plt.plot(np.linspace(0,1), nustar.collMax[0](np.linspace(0,1)), c='#000055')
-j = np.argmin(np.abs(nustar.tfits - 1.25))
-plt.plot(np.linspace(0,1), nustar.collMed[j](np.linspace(0,1)), c='#ff5500', label='1.03s, LOC->SOC')
-plt.plot(np.linspace(0,1), nustar.collMin[j](np.linspace(0,1)), c='#553300')
-plt.plot(np.linspace(0,1), nustar.collMax[j](np.linspace(0,1)), c='#553300')
+j = np.argmin(np.abs(nustar.tfits - 0.77))
+plt.semilogy(np.linspace(0,1), nustar.collMed[0](np.linspace(0,1)), c='#0000ff', label='0.79s, SOC->LOC')
+plt.semilogy(np.linspace(0,1), nustar.collMin[0](np.linspace(0,1)), c='#000055')
+plt.semilogy(np.linspace(0,1), nustar.collMax[0](np.linspace(0,1)), c='#000055')
+j = np.argmin(np.abs(nustar.tfits - 1.01))
+plt.semilogy(np.linspace(0,1), nustar.collMed[j](np.linspace(0,1)), c='#ff5500', label='1.01s, LOC->SOC')
+plt.semilogy(np.linspace(0,1), nustar.collMin[j](np.linspace(0,1)), c='#553300')
+plt.semilogy(np.linspace(0,1), nustar.collMax[j](np.linspace(0,1)), c='#553300')
 
 plt.legend()
 
