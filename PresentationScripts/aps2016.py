@@ -282,7 +282,7 @@ hysteresisPlot(1160506015, axarr, profiles[0], 'b')
 
 # %% PCI Stuff
 
-idlsav = scipy.io.readsav('/home/normandy/1160506015_pci.sav')
+idlsav = scipy.io.readsav('/home/normandy/1160506007_pci.sav')
 
 t = idlsav.spec.t[0]
 f = idlsav.spec.f[0]
@@ -310,7 +310,7 @@ plt.plot(t, totaln)
 
 # %%
 
-f0, f1, f2, f3 = np.searchsorted(f, (100, 200, 300, 700))
+f0, f1, f2, f3 = np.searchsorted(f, (50, 200, 300, 700))
 
 svk = np.sum(s[:,f0:f1,:], axis=1)
 svk2 = np.sum(s[:,f2:f3,:], axis=1)
@@ -327,9 +327,15 @@ vkp2 = np.sum(svk2[:,17:23], axis=1)
 vkn2 = np.sum(svk2[:,10:16], axis=1)
 
 plt.figure()
-plt.plot(t, (vkp-vkn)/(vkp+vkn)/2, marker='.')
-plt.plot(t, (vkp2-vkn2)/(vkp2+vkn2)/2, marker='.')
+plt.plot(t, (vkp-vkn)/(vkp+vkn)*2, marker='.')
+plt.plot(t, (vkp2-vkn2)/(vkp2+vkn2)*2, marker='.')
 plt.axhline(color='r', ls='--')
+
+plt.figure()
+plt.plot(t, (vkp+vkn)/2, marker='.', c='b')
+
+plt.figure()
+plt.plot(t, (vkp2+vkn2)/2, marker='.', c='g')
 
 """
 def plotTiRotation(shot, tmin=0.5, tmax=1.45, color='b', delay=5, offset=0):

@@ -90,66 +90,7 @@ def getInfoFile(shot, module):
                        
     return mirror, det
 
-# This info file is from 1150903028
-"""
-mirrorHe = InfoMirror(np.array([3.687, 0, 0.0004]), # [R, theta, Z] of crystal location [m]
-                      np.array([0.0, -0.00174533, 2.025]), # [alpha, beta, gamma] rotation angles [rad]
-                      np.array([0.064, 0.027]), # [y, z] size of crystal [m]
-                      InfoBragg(1.0, 0.0, 4.56216), # [integrated reflectivity, rocking curve, 2d spacing [Ang]]
-                      1.442) # radius of crystal curvature
-det2 = InfoDetector(np.array([111.082, -60.73, -3.0108])/100.0, # position of origin of det system
-                    np.array([111.083, -60.7308, 5.36560])/100.0, # position of point along zeta axis
-                    np.array([109.396, -63.6292, -3.01080])/100.0, # position of point along xi axis
-                    -1, # xi values of pixel centers, unused
-                    -1, # zeta values of pixel centers, unused
-                    np.array([0.0172, 0.0172])/100.0, # [xi, zeta] size of pixels [m]
-                    195, # number of xi channels
-                    487) # number of zeta channels
-
-det1 = InfoDetector(np.array([111.196, -60.7343, 5.68298])/100.0, # position of origin of det system
-                    np.array([111.202, -59.5147, 13.9701])/100.0, # position of point along zeta axis
-                    np.array([109.532, -63.6150, 6.10806])/100.0, # position of point along xi axis
-                    -1, # xi values of pixel centers, unused
-                    -1, # zeta values of pixel centers, unused
-                    np.array([0.0172, 0.0172])/100.0, # [xi, zeta] size of pixels [m]
-                    195, # number of xi channels
-                    487) # number of zeta channels
-"""
-
-# Spectral lines
-lamz = 3.9941451
-lamw = 3.9490665
-
-# %% Get the magnetic geometry
-
-"""
-e = eqtools.CModEFITTree(shot)
-rgrid = e.getRGrid()
-zgrid = e.getZGrid()
-
-plt.close("all")
-
-flux = e.getFluxGrid()
-flcfs = e.getFluxLCFS()
-levels = np.linspace(np.min(flux[35,:,:]), flcfs[35], 8)
-
-if plotting:
-    plt.figure()
-    # Plot the magnetic flux
-    rplot, zplot = np.meshgrid(rgrid, zgrid)
-    plt.contour(rplot, zplot, flux[35,:,:], levels=levels)
-    plt.colorbar()
-    plt.axis('equal')
-    
-    plt.figure()
-    circlex = np.cos(np.linspace(0, 2*np.pi, 256))
-    circley = np.sin(np.linspace(0, 2*np.pi, 256))
-    plt.plot(0.44*circlex, 0.44*circley, c='#550000')
-    plt.plot(0.89*circlex, 0.89*circley, c='#550000')
-    plt.axis('equal')
-"""
-
-# %% Calculate the transfer function
+# %% Calculate the transfer function from the mirror to the detector
 
 def raytrace(m, det, m_y, m_z, det_xi, det_zeta, generateRays=False):
     """
@@ -185,6 +126,7 @@ def raytrace(m, det, m_y, m_z, det_xi, det_zeta, generateRays=False):
     area_m = np.array([area_m]*len(det_xi)) # resize array to proper size
     
     # Unit translation vectors along the xi and zeta axes, mirror coordinates
+    # Reminder that xi is along the wavelength axis, zeta is along the spatial axis
     xi_m = (det.x2 - det.x0) / np.linalg.norm(det.x2 - det.x0) * det.size[1]
     zeta_m = (det.x1 - det.x0) / np.linalg.norm(det.x1 - det.x0) * det.size[1]
     
@@ -246,7 +188,7 @@ def momentAnalysis(lam, weight, lam0):
 
 # %% Full integrated code
 
-def calculateWavelengths(shot, module, plotting=True):
+def calculateInstrumentals(shot, module):
     mirror, det = getInfoFile(shot, module)
     m_y = np.array([0.0])
     m_z = np.array([0.0])
@@ -255,30 +197,14 @@ def calculateWavelengths(shot, module, plotting=True):
     lam1, weight1 = raytrace(mirror, det, m_y, m_z, det_xi_grid.flatten(), det_zeta_grid.flatten())
     lam1_grid = lam1.reshape(det_xi_grid.shape)
     
-    if plotting:
-        plt.figure()
-        plt.pcolormesh(det_xi_grid, det_zeta_grid, lam1_grid)
-        plt.colorbar()
-        
-    return np.flipud(lam1_grid.T)
-
-def calculateInstrumentals(shot, module, plotting=True, writeToTree=False):
-    mirror, det = getInfoFile(shot, module)
-    m_y = np.array([0.0])
-    m_z = np.array([0.0])
-    
-    det_xi_grid, det_zeta_grid = np.meshgrid(np.array(range(det.n_xi)), np.array(range(det.n_zeta)))
-    lam1, weight1 = raytrace(mirror, det, m_y, m_z, det_xi_grid.flatten(), det_zeta_grid.flatten())
-    lam1_grid = lam1.reshape(det_xi_grid.shape)
-    
-    if plotting:
-        plt.figure()
-        plt.pcolormesh(det_xi_grid, det_zeta_grid, lam1_grid)
-        plt.colorbar()
+    plt.figure()
+    plt.pcolormesh(det_xi_grid, det_zeta_grid, lam1_grid)
+    plt.colorbar()
+    plt.title('central wavelength')
     
     
     # Use n-th order Gauss-Legendre quadrature to integrate over mirror
-    m_range, m_weights = np.polynomial.legendre.leggauss(3)
+    m_range, m_weights = np.polynomial.legendre.leggauss(2)
     m_x_grid, m_y_grid = np.meshgrid(m_range*mirror.size[0]/2.0, m_range*mirror.size[1]/2.0)
     m_grid_weights = np.outer(m_weights, m_weights).flatten()
     
@@ -289,9 +215,13 @@ def calculateInstrumentals(shot, module, plotting=True, writeToTree=False):
     m3_grid = np.zeros((487, 195))
     
     # Use n-th order Gauss-Legendre quadrature when integrating over pixel as well
-    p_range, p_weights = np.polynomial.legendre.leggauss(3)
+    p_range, p_weights = np.polynomial.legendre.leggauss(2)
     p_range = p_range/2.0 + 0.5
     p_weights = p_weights * 0.5
+    
+    # Spectral lines
+    lamz = 3.9941451
+    lamw = 3.9490665
     
     for row in range(487):
         if row%10 == 0:
@@ -305,95 +235,24 @@ def calculateInstrumentals(shot, module, plotting=True, writeToTree=False):
             m2_grid[row, col] = m2
             m3_grid[row, col] = m3
             inst_temp_grid[row, col] = inst_temp
-    
-    if plotting:
-        plt.figure()
-        plt.pcolormesh(m1_grid[:,:], det_zeta_grid, (m1_grid[:,:]-lam1_grid)*1e3)
-        plt.colorbar()
         
-        
-        plt.figure()
-        plt.pcolormesh(m1_grid[:,:], det_zeta_grid, np.sqrt(m2_grid)[:,:])
-        plt.axvline(lamz)
-        plt.axvline(lamw)
-        plt.colorbar()
+    plt.figure()
+    plt.pcolormesh(m1_grid[:,:], det_zeta_grid, (m1_grid[:,:]-lam1_grid)*1e3)
+    plt.colorbar()
+    plt.title('instrumental offset, mAng')
 
-    ishift = np.zeros((det.n_xi, det.n_zeta))
-    itemp = np.sqrt(m2_grid.T)
+    
+    plt.figure()
+    plt.pcolormesh(m1_grid[:,:], det_zeta_grid, inst_temp_grid[:,:])
+    plt.axvline(lamz)
+    plt.axvline(lamw)
+    plt.colorbar()
+    plt.title('instrumental temperature')
+
+    #ishift = np.zeros((det.n_xi, det.n_zeta))
+    #itemp = np.sqrt(m2_grid.T)
     # For whatever reason the indices are backwards in THACO
-    itemp = np.flipud(itemp)
+    #itemp = np.flipud(itemp)
     #itemp = np.fliplr(itemp)
-    print "flipped"
+    #print "flipped"
     
-    if writeToTree:
-        # Note this is taken from Mat Reinke's code directly
-        newInst = MDSplus.Data.compile('build_signal(build_with_units($1,"Ang"),*,build_with_units($2,"Ang"))', itemp, ishift)
-        specTree = MDSplus.Tree('spectroscopy', shot)
-        instNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.CALIB.'+module+':INST')
-        instNode.putData(newInst)
-    
-    return ishift, itemp, np.flipud(m1_grid.T), np.flipud(m1_grid.T)
-
-
-# %% Playing with instrument functions
-"""
-mAr = 37211326.1 # Mass of argon in keV
-
-def singleGaussian(lam0, te):
-    w = lam0**2 * te / mAr
-    a = 1 / np.sqrt(w * 2 * np.pi)
-    return lambda x: a * np.exp(-np.square(x - lam0) / 2 / w)
-    
-def instrumentFunction(lam, weight):
-    hist, inst_lam = np.histogram(lam, bins=63, weights=weight, density=True)
-    inst_f = np.zeros(inst_lam.shape)
-    inst_f[1:] += hist/2.0
-    inst_f[:-1] += hist/2.0
-    
-    return inst_f, inst_lam
-    
-def evalInstrumentFunction(f, inst_f, inst_lam):
-    dlam = np.median(np.diff(inst_lam))
-    return inst_f.dot(f(inst_lam)) * dlam
-"""
-# %% Evaluate instrument function
-"""
-lam0 = lamw
-lam0_grid = lam1_grid
-
-f = singleGaussian(lam0, 1.16)
-
-row = 50
-col0 = w_pix2[row]
-
-colrange = range(col0-15, col0+10)
-
-ishift = m1_grid[row, col0, 0] - lam0_grid[row, col0]
-itemp = m2_grid[row, col0, 0] / (lam0**2 / mAr)
-
-g = singleGaussian(lam0-ishift, 1.16+itemp)
-
-syntheticLine = f(lam0_grid[row, colrange])
-convolvedLine = g(lam0_grid[row, colrange])
-instrumentLine = np.zeros(len(colrange))
-
-m_range = np.linspace(-0.5, 0.5, 64)
-m_x_grid, m_y_grid = np.meshgrid(m_range*mirrorHe.size[0], m_range*mirrorHe.size[1])
-
-p_range = np.linspace(0, 1, 16)
-
-j = 0
-for col in colrange:
-    lam, weight = raytrace(mirrorHe, det1, m_x_grid.flatten(), m_y_grid.flatten(), p_range+col, p_range+row)
-    inst_f, inst_lam = instrumentFunction(lam.flatten(), weight.flatten())
-    instrumentLine[j] = evalInstrumentFunction(f, inst_f, inst_lam)
-    j += 1
-    
-plt.figure()
-plt.plot(colrange, syntheticLine, marker='.', c='g', label='Synthetic W line')
-plt.plot(colrange, convolvedLine, marker='.', c='r', label='Gaussian Convolution')
-plt.plot(colrange, instrumentLine, marker='+', c='b', label='Instrument Function')
-plt.xlabel('Pixels [+'+str(col0)+']')
-plt.ylabel('Counts [A.U.]')
-plt.legend(loc='upper left')
-"""
