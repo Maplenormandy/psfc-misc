@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 # %% load spectroscopic data
 
-specTree = MDSplus.Tree('spectroscopy', 1121002022)
+specTree = MDSplus.Tree('spectroscopy', 1120914036)
 #mod1Node = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.RAW_DATA:MOD1')
 mod2Node = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.RAW_DATA:MOD4')
 #mod3Node = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.RAW_DATA:MOD3')
