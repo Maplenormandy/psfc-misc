@@ -2,7 +2,7 @@
 """
 Created on Thu Feb  1 14:13:37 2018
 
-Checks if the line-integrated data looks good for use
+Checks if the THACO data looks good for use
 
 @author: normandy
 """
