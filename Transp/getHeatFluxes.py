@@ -15,7 +15,7 @@ import eqtools
 
 # %% open tree
 
-loc=True
+loc=False
 
 if loc:
     transpShot = 89670
@@ -187,3 +187,17 @@ ax.xaxis.set_ticks_position('none')
 ax.xaxis.set_ticks([])
 ax.yaxis.set_ticks([])
 """
+
+# %% Plot shear and safety factor
+
+etime = e.getTimeBase()
+eind = np.searchsorted(etime, t0)
+
+safety = e.getQProfile()[eind,:]
+rmid_safety = e.getRmidPsi()[eind,:]
+roa_safety = e.rmid2roa(rmid_safety, t0)
+
+shear = np.ediff1d(np.log(safety)) / np.ediff1d(np.log(roa_safety))
+roa_shear = (roa_safety[1:] + roa_safety[:-1])/2.0
+
+plt.plot(roa_safety, safety)
