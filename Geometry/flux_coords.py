@@ -40,6 +40,8 @@ kappa = e.getElongation()[tind]
 aout = e.getAOut()[tind]
 rmag = e.getMagR()[tind]
 
+
+
 r = rmid-rmag
 
 ## Start with a single field line
@@ -49,7 +51,7 @@ x = np.array([rmag + r[16]*np.cos(theta0), r[16]*np.sin(theta0)])
 v = np.zeros(x.shape)
 # Flattens row major, so fastest is point, then r/z, then x/v
 state = np.array([x, v])
-statevec = np.flatten(state)
+statevec = state.flatten()
 
 
 rplot, zplot = np.meshgrid(rgrid, zgrid)
@@ -74,5 +76,6 @@ def deriv(t, y, psi0):
     dir_flux = np.array([flux.ev(r, z, dx=1), flux.ev(r, z, dy=1)])
     f_flux = k_flux * delta_flux * dir_flux
 
-    # Force between
+    # Force between points to enforce straight field line coordinates
+
     pass
