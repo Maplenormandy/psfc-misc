@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import scipy.interpolate
+from scipy.integrate import ode
 
 import readline
 import MDSplus
@@ -46,6 +47,10 @@ r = rmid-rmag
 theta0 = np.linspace(0, 2*np.pi, 32)
 x = np.array([rmag + r[16]*np.cos(theta0), r[16]*np.sin(theta0)])
 v = np.zeros(x.shape)
+# Flattens row major, so fastest is point, then r/z, then x/v
+state = np.array([x, v])
+statevec = np.flatten(state)
+
 
 rplot, zplot = np.meshgrid(rgrid, zgrid)
 
@@ -58,7 +63,16 @@ psi = flux.ev(rmid, np.zeros(rmid.shape))
 psi0 = psi[16]
 
 # %% Start evolving points
+k_flux = 1.0
+def deriv(t, y, psi0):
+    s = np.reshape(y, (state.shape))
+    r = s[0,0,:]
+    z = s[0,1,:]
 
-ds = 0.1
+    # Restoring force towards correct flux surface
+    delta_flux = (psi0 - flux.ev(r, z))
+    dir_flux = np.array([flux.ev(r, z, dx=1), flux.ev(r, z, dy=1)])
+    f_flux = k_flux * delta_flux * dir_flux
 
-
+    # Force between
+    pass
