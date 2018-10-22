@@ -156,7 +156,7 @@ plt.figure()
 plt.plot(neo_roa[0:], qi_anom[0:]/qinorm, marker='.', label='Qi')
 plt.plot(neo_roa[0:], qe_anom[0:]/qenorm, marker='.', label='Qe')
 plt.plot(neo_roa[0:], fe_anom[0:]/fenorm, marker='.', label='$\Gamma$e')
-plt.plot(neo_roa[0:], neo_stresstot/pinorm, marker='.', label='$\Pi$i')
+#plt.plot(neo_roa[0:], neo_stresstot/pinorm, marker='.', label='$\Pi$i')
 plt.axhline(ls='--', c='k')
 plt.xlabel('r/a')
 plt.ylabel('anomalous flux [GB units, r/a=0.575]')
@@ -199,5 +199,7 @@ roa_safety = e.rmid2roa(rmid_safety, t0)
 
 shear = np.ediff1d(np.log(safety)) / np.ediff1d(np.log(roa_safety))
 roa_shear = (roa_safety[1:] + roa_safety[:-1])/2.0
+
+plt.figure()
 
 plt.plot(roa_safety, safety)

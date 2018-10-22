@@ -28,9 +28,10 @@ sig88ut = elecTree.getNode('\ELECTRONS::TOP.REFLECT.CPCI:DT132_1:INPUT_09').dim_
 ci = np.mean(sig88ui)
 cq = np.mean(sig88uq)
 
+nl04Node = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS:NL_04')
 
 # %%
-t1, t2 = np.searchsorted(sig88ut, (0.5,1.5))
+t1, t2 = np.searchsorted(sig88ut, (0.4,1.6))
 #0.5944-0.5954
 #0.9625-0.9650
 
@@ -40,12 +41,15 @@ st = sig88ut[t1:t2]
 z = si+1j*sq
 ampli = si**2 + sq**2
 
-b, a = signal.butter(4, 0.2, btype='lowpass')
-#sshsi = signal.filtfilt(b, a, si)
-#sshsq = signal.filtfilt(b, a, sq)
+b, a = signal.butter(4, 1e-4, btype='lowpass')
+sshsi = signal.filtfilt(b, a, si-ci)
+sshsq = signal.filtfilt(b, a, sq-cq)
 
-sshsi = si
-sshsq = sq
+ci = np.median(si)
+cq = np.median(sq)
+
+#sshsi = si - ci
+#sshsq = sq - cq
 
 t3, t4 = np.searchsorted(st, (0.5,1.5))
 
@@ -67,8 +71,8 @@ def getPhiWrapped(si, sq, ci, cq):
     phdiffsum = np.concatenate(([0], phidiffsum1+phidiffsum2))
     return (phi+phdiffsum)
 
-c2 = getPhiWrapped(sshsi, sshsq, 0, 0)
-c3 = signal.filtfilt(b, a, c2)
+c2 = getPhiWrapped(hsi, hsq, 0, 0)
+c3 = getPhiWrapped(si[t3:t4], sq[t3:t4], ci, cq)
 
 
 
@@ -115,6 +119,62 @@ tm = np.convolve(t, avgWindow, mode='valid')
 
 Sxxk22 = (nsamp/(nsamp-1.0))*Sxxm22
 Sxxk42 = nsamp*nsamp*((nsamp+1)*Sxxm42-3*(nsamp-1)*Sxxm22**2)/((nsamp-1.0)*(nsamp-2.0)*(nsamp-3.0))
+
+# %%
+
+f = plt.figure()
+ax = f.add_subplot(111)
+ax.plot(hst, c2)
+ax.set_ylabel('Low-pass (100kHz) reflectometer phase')
+
+
+nltime = nl04Node.dim_of().data()
+nl0, nl1 = np.searchsorted(nltime, (0.5, 1.5))
+
+ax2 = ax.twinx()
+ax2.plot(nltime[nl0:nl1], nl04Node.data()[nl0:nl1])
+ax2.set_ylabel('nl_04')
+
+# %%
+
+plt.figure()
+plt.plot(hst, c3/2/np.pi, marker='.')
+
+# %%
+
+rt1, rt2, rt3, rt4 = np.searchsorted(sig88ut, (0.57, 0.63, 0.93, 0.99))
+
+#dc3 = np.gradient(c3)
+dc3 = np.abs((si[t3:t4]-ci) + (sq[t3:t4]-cq)*1j)
+df1, db1 = np.histogram(dc3[rt1:rt2], bins=256, density=True)
+df2, db2 = np.histogram(dc3[rt3:rt4], bins=256, density=True)
+
+dbc1 = (db1[1:] + db1[:-1])/2
+dbc2 = (db2[1:] + db2[:-1])/2
+
+m1 = np.average(dbc1, weights=df1)
+m2 = np.average(dbc2, weights=df2)
+
+var1 = np.average((dbc1-m1)**2, weights=df1)
+var2 = np.average((dbc2-m2)**2, weights=df2)
+
+plt.figure()
+plt.fill_between(dbc1, df1*1.0, 0, facecolor='red', alpha=0.5)
+plt.fill_between(dbc2, df2*1.0, 0, facecolor='blue', alpha=0.5)
+
+print stats.kstat(dc3[rt1:rt2], n=4) / stats.kstat(dc3[rt1:rt2], n=2)**2
+print stats.kstat(dc3[rt3:rt4], n=4) / stats.kstat(dc3[rt3:rt4], n=2)**2
+
+
+# %%
+
+H, xedges, yedges = np.histogram2d(st, c2, bins=32)
+H = H.T
+
+plt.figure()
+x,y = np.meshgrid(xedges, yedges)
+plt.pcolormesh(x, y, np.clip(H, np.min(H), np.percentile(H, 99)), cmap='cubehelix')
+plt.axis('square')
 
 
 # %%
