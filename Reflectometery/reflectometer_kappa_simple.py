@@ -67,7 +67,7 @@ plt.axis('square')
 
 # %% Reshape into 10ms time windows
 
-nsamp = 19990
+nsamp = 1999
 
 shsi = np.reshape(si, (-1, nsamp))
 shsq = np.reshape(sq, (-1, nsamp))
@@ -97,7 +97,7 @@ dper2 = np.ravel(dperr - dperavg)
 par = np.cumsum(dpar)
 per = np.cumsum(dper2)
 
-hper = signal.filtfilt(hb, ha, per)
+hper = per
 
 avgt = np.mean(np.reshape(st, (-1, nsamp)), axis=-1)
 rper = np.reshape(per, (-1, nsamp))
