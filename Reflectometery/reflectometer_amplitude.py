@@ -81,8 +81,8 @@ hc2 = c2[t3:t4]
 #dc3 = np.abs(hsz)
 
 #rt1, rt2, rt3, rt4 = np.searchsorted(st, (0.5944, 0.5954, 0.9632, 0.9642))
-rt1, rt2, rt3, rt4 = np.searchsorted(st, (0.5948, 0.5950, 0.9636, 0.9638))
-#rt1, rt2, rt3, rt4 = np.searchsorted(st, (0.5849, 0.6049, 0.9537, 0.9737))
+#rt1, rt2, rt3, rt4 = np.searchsorted(st, (0.5948, 0.5950, 0.9636, 0.9638))
+rt1, rt2, rt3, rt4 = np.searchsorted(st, (0.5849, 0.6049, 0.9537, 0.9737))
 #rt1, rt2, rt3, rt4 = np.searchsorted(st, (0.5649, 0.6249, 0.9337, 0.9637))
 #dc3 = np.abs(sz)
 dc3 = c2
@@ -99,6 +99,9 @@ ang2 = np.angle(np.mean(np.exp(1j*(soc_data-m2))))
 loc_data2 = np.mod(loc_data-m1-ang1+np.pi, 2.0*np.pi)-np.pi
 soc_data2 = np.mod(soc_data-m2-ang2+np.pi, 2.0*np.pi)-np.pi
 
+#loc_data2 = loc_data-m1-ang1+np.pi-np.pi
+#soc_data2 = soc_data-m2-ang2+np.pi-np.pi
+
 var1 = np.var(loc_data2)
 var2 = np.var(soc_data2)
 
@@ -114,7 +117,7 @@ plt.figure()
 plt.fill_between(dbc1/np.pi, df1*1.0, 0, facecolor='red', alpha=0.5, label='LOC')
 plt.fill_between(dbc2/np.pi, df2*1.0, 0, facecolor='blue', alpha=0.5, label='SOC')
 
-plt.xlabel('|z|')
+plt.xlabel('$\phi$ / $\pi$')
 plt.ylabel('probability of observing')
 plt.legend()
 plt.show()
@@ -123,9 +126,8 @@ print var1, var2
 print stats.kstat(dc3[rt1:rt2], n=4) / stats.kstat(dc3[rt1:rt2], n=2)**2
 print stats.kstat(dc3[rt3:rt4], n=4) / stats.kstat(dc3[rt3:rt4], n=2)**2
 
-"""
 # %%
-
+"""
 H, xedges, yedges = np.histogram2d(st, np.abs(sz), bins=(100,128))
 H = H.T
 
