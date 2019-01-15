@@ -173,9 +173,9 @@ def trophyPlot(sm1, sm2):
     
     #axarr[2].plot(sm1.tciData.time[3,:], ne1)
     #axarr[2].plot(sm2.tciData.time[3,:], ne2)
-"""
+
 sm1 = ShotManager(1120106012, 0, 16)
 sm2 = ShotManager(1120106020, 0, 16)
-"""
+
 plt.close("all")
 trophyPlot(sm1, sm2)

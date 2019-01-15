@@ -1,4 +1,7 @@
 AllMapsOutput
+# Pickle and other data files
+*.npy
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
