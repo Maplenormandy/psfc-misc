@@ -88,11 +88,11 @@ bsom_loc = omfit_loc.bsom[time_index]['fit'][0]
 
 fig1_2 = {}
 fig1_2['soc_roa'] = thacodata_soc.roa[:radial_index]
-fig1_2['soc_roa'] = thacodata_soc.pro[1,time_index,:radial_index]
-fig1_2['soc_roa'] = thacodata_soc.perr[1,time_index,:radial_index]
-fig1_2['soc_roa'] = thacodata_loc.roa[:radial_index]
-fig1_2['soc_roa'] = thacodata_soc.pro[1,time_index,:radial_index]
-fig1_2['soc_roa'] = thacodata_soc.perr[1,time_index,:radial_index]
+fig1_2['soc_pro'] = thacodata_soc.pro[1,time_index,:radial_index]
+fig1_2['soc_perr'] = thacodata_soc.perr[1,time_index,:radial_index]
+fig1_2['loc_roa'] = thacodata_loc.roa[:radial_index]
+fig1_2['loc_pro'] = thacodata_soc.pro[1,time_index,:radial_index]
+fig1_2['loc_perr'] = thacodata_soc.perr[1,time_index,:radial_index]
 
 np.savez('figure1_2.npz', **fig1_2)
 
