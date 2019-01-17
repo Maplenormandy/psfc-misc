@@ -5,21 +5,12 @@ Created on Wed Dec 19 13:52:05 2018
 @author: normandy
 """
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-
 import numpy as np
 import scipy.io, scipy.signal
 
 import MDSplus
 
 import eqtools
-
-font = {'family' : 'serif',
-        'serif': ['Computer Modern'],
-        'size'   : 10}
-
-mpl.rc('font', **font)
 
 # %% General function definitions
 
@@ -129,7 +120,7 @@ def plotHysteresis(shot):
     offset = ((shot%100)-4.0)/(25.0-7.0)*6
 
     return np.array([nlData, vdata+offset])
-    
+
 hys01 = plotHysteresis(1160506007)
 hys02 = plotHysteresis(1160506008)
 hys03 = plotHysteresis(1160506024)
@@ -202,7 +193,6 @@ fz_soc = np.fft.fftshift(np.fft.fft(z_soc))/2e3/2e3
 fz_loc = np.fft.fftshift(np.fft.fft(z_loc))/2e3/2e3
 freqs = np.fft.fftshift(np.fft.fftfreq(total_samples, 1.0/2e6))
 
-fig4 = plt.figure(4, figsize=(3.375, 3.375*0.75))
 
 Sxx_loc_down = np.real(np.average(np.reshape(fz_loc*np.conjugate(fz_loc), (down_samples, -1)), axis=-1))
 Sxx_soc_down = np.real(np.average(np.reshape(fz_soc*np.conjugate(fz_soc), (down_samples, -1)), axis=-1))
