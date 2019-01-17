@@ -91,8 +91,8 @@ fig1_2['soc_roa'] = thacodata_soc.roa[:radial_index]
 fig1_2['soc_pro'] = thacodata_soc.pro[1,time_index,:radial_index]
 fig1_2['soc_perr'] = thacodata_soc.perr[1,time_index,:radial_index]
 fig1_2['loc_roa'] = thacodata_loc.roa[:radial_index]
-fig1_2['loc_pro'] = thacodata_soc.pro[1,time_index,:radial_index]
-fig1_2['loc_perr'] = thacodata_soc.perr[1,time_index,:radial_index]
+fig1_2['loc_pro'] = thacodata_loc.pro[1,time_index,:radial_index]
+fig1_2['loc_perr'] = thacodata_loc.perr[1,time_index,:radial_index]
 
 np.savez('figure1_2.npz', **fig1_2)
 
@@ -125,6 +125,7 @@ hys01 = plotHysteresis(1160506007)
 hys02 = plotHysteresis(1160506008)
 hys03 = plotHysteresis(1160506024)
 
+np.savez('figure2.npz', hys01=hys01,hys02=hys02,hys03=hys03)
 
 # %% Figure 3: Profile matched plots
 
@@ -152,7 +153,7 @@ fig3_2['soc_err'] = bsti_soc['err'][::2]
 fig3_2['alti_soc'] = alti_soc[::2]
 fig3_2['alti_soc_err'] = alti_soc_err[::2]
 
-np.savez('figure3_2.npy', **fig3_2)
+np.savez('figure3_2.npz', **fig3_2)
 
 # %% Figure 4: Reflecometer plots
 
