@@ -22,72 +22,11 @@ font = {'family' : 'serif',
 mpl.rc('font', **font)
 
 # %% General function definitions
-
-class ThacoData:
-    def __init__(self, thtNode, shot=None, tht=None, path='.HELIKE.PROFILES.Z', time=0.95):
-        if (thtNode == None):
-            self.shot = shot
-            self.specTree = MDSplus.Tree('spectroscopy', shot)
-
-            if (tht == 0):
-                self.tht = ''
-            else:
-                self.tht = str(tht)
-
-            self.thtNode = self.specTree.getNode('\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS' + self.tht + path)
-        else:
-            self.thtNode = thtNode
-
-        e = eqtools.CModEFITTree(shot)
-
-        proNode = self.thtNode.getNode('PRO')
-        perrNode = self.thtNode.getNode('PROERR')
-        rhoNode = self.thtNode.getNode('RHO')
-
-        rpro = proNode.data()
-        rperr = perrNode.data()
-        rrho = rhoNode.data()
-        rtime = rhoNode.dim_of()
-
-        goodTimes = (rtime > 0).sum()
-
-        self.time = rtime.data()[:goodTimes]
-        self.rho = rrho[0,:] # Assume unchanging rho bins
-        self.roa = e.psinorm2roa(self.rho, time)
-        self.pro = rpro[:,:goodTimes,:len(self.rho)]
-        self.perr = rperr[:,:goodTimes,:len(self.rho)]
-
-def trimNodeData(node, t0=0.5, t1=1.5):
-    time = node.dim_of().data()
-    data = node.data()
-    i0, i1 = np.searchsorted(time, (t0, t1))
-    return time[i0:i1+1], data[i0:i1+1]
-def trimData(time, data, t0=0.5, t1=1.5):
-    i0, i1 = np.searchsorted(time, (t0, t1))
-    return time[i0:i1+1], data[i0:i1+1]
-
-# %% Data loading
-elecTree = MDSplus.Tree('electrons', 1160506007)
-specTree = MDSplus.Tree('spectroscopy', 1160506007)
-
-nl04time, nl04data = trimNodeData(elecTree.getNode(r'\ELECTRONS::TOP.TCI.RESULTS:NL_04'))
-vnode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.W:VEL')
-vtime, vdata = trimData(vnode.dim_of().data(), vnode.data()[0])
-
-# %%
-
-tifit_soc = scipy.io.readsav('/home/normandy/fits/tifit_1120106012_THT0.dat')
-omfit_soc = scipy.io.readsav('/home/normandy/fits/omfit_1120106012_THT0.dat')
-tifit_loc = scipy.io.readsav('/home/normandy/fits/tifit_1120106016_THT0.dat')
-omfit_loc = scipy.io.readsav('/home/normandy/fits/omfit_1120106016_THT0.dat')
-
-thacodata_soc = ThacoData(None, 1120106012, 0)
-thacodata_loc = ThacoData(None, 1120106016, 0)
+# %% Figure 1: time traces and rotation profiles
 
 
-# %% Figure 1: time traces and rotation profiles\
 
-fig1 = plt.figure(1, figsize=(3.375, 3.375*1.2))
+fig1 = plt.figure(1, figsize=(3.375, 3.375))
 gs1 = mpl.gridspec.GridSpec(2, 1, height_ratios=[2,1])
 gs1_inner = mpl.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs1[0], hspace=0.0)
 
@@ -96,7 +35,7 @@ ax10.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
 ax10.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
 ax10.plot(nl04time, nl04data/1e20/0.6, c='k')
 ax10.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
-ax10.set_ylabel(r'$\bar{n}_e$ ($10^{19} \mathrm{m}^{-3}$)')
+ax10.set_ylabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
 ax10.set_ylim([0.68,1.02])
 plt.setp(ax10.get_xticklabels(), visible=False)
 
@@ -181,12 +120,12 @@ ax21.axhspan(-7, -2, xmin=0.38, color=(0.7,0.7,1.0))
 #fig2.add_subplot(111, frameon=False)
 #plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
 #plt.grid(False)
-#plt.xlabel(r'$\bar{n}_e$ [$10^{19} \mathrm{m}^{-3}$]')
+#plt.xlabel(r'$\bar{n}_e$ [$10^{20} \mathrm{m}^{-3}$]')
 #plt.ylabel(r'$v_{tor}$ [km/s]')
 
 ax20.set_ylabel(r'$v_{tor}$ (km/s)')
-ax20.set_xlabel(r'$\bar{n}_e$ ($10^{19} \mathrm{m}^{-3}$)')
-ax21.set_xlabel(r'$\bar{n}_e$ ($10^{19} \mathrm{m}^{-3}$)')
+ax20.set_xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
+ax21.set_xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
 ax21.set_ylabel(r'$v_{tor}$ (km/s)')
 
 plt.tight_layout(h_pad=1.08)
