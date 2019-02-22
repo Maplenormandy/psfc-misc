@@ -11,22 +11,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io, scipy.signal
 
-import MDSplus
-
-import eqtools
-
 font = {'family' : 'serif',
         'serif': ['Computer Modern'],
-        'size'   : 10}
+        'size'   : 9}
 
 mpl.rc('font', **font)
 
-# %% General function definitions
 # %% Figure 1: time traces and rotation profiles
 
+fig1_1 = np.load('figure1_1.npz')
 
+nl04time = fig1_1['nl04time']
+nl04data = fig1_1['nl04data']
+vtime = fig1_1['vtime']
+vdata = fig1_1['vdata']
 
-fig1 = plt.figure(1, figsize=(3.375, 3.375))
+fig1 = plt.figure(1, figsize=(3.375, 3.375*1.1))
 gs1 = mpl.gridspec.GridSpec(2, 1, height_ratios=[2,1])
 gs1_inner = mpl.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs1[0], hspace=0.0)
 
@@ -51,71 +51,36 @@ ax11.set_ylabel('$v_{tor}$ (km/s)')
 ax11.set_xlabel('time (sec)')
 ax11.set_xlim([0.5, 1.5])
 
-time_index = 20
-radial_index = 20
-
-bsom_soc = omfit_soc.bsom[time_index]['fit'][0]
-bsom_loc = omfit_loc.bsom[time_index]['fit'][0]
+fig12 = np.load('figure1_2.npz')
 
 ax12 = plt.subplot(gs1[1])
-ax12.axvspan(0.35, 0.65, color=(0.7, 1.0, 1.0))
-ax12.errorbar(thacodata_soc.roa[:radial_index], thacodata_soc.pro[1,time_index,:radial_index], thacodata_soc.perr[1, time_index,:radial_index], c='b')
-ax12.errorbar(thacodata_loc.roa[:radial_index], thacodata_loc.pro[1,time_index,:radial_index], thacodata_loc.perr[1, time_index,:radial_index], c='r')
+ax12.axvspan(0.56, 0.59, color=(0.7, 1.0, 1.0))
+ax12.errorbar(fig12['soc_roa'], fig12['soc_pro'], fig12['soc_perr'], c='b')
+ax12.errorbar(fig12['loc_roa'], fig12['loc_pro'], fig12['loc_perr'], c='r')
 ax12.axhline(c='k', ls='--')
 ax12.xaxis.set_major_locator(mpl.ticker.MultipleLocator(0.2))
 ax12.yaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
 ax12.set_ylabel('$f_{tor}$ (kHz)')
 ax12.set_xlabel('r/a')
 
-plt.tight_layout(h_pad=1.6)
-plt.tight_layout(h_pad=1.6)
+plt.tight_layout()
+plt.tight_layout()
 
 plt.savefig('figure1.eps', format='eps', dpi=1200)
 
 # %% Figure 2: Hysteresis plot
 
-def plotHysteresis(shot, ax, c='b'):
-    elecTree = MDSplus.Tree('electrons', shot)
+fig2 = plt.figure(2, figsize=(3.375, 3.375*0.75))
 
-    nl04Node = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS:NL_04')
-    specTree = MDSplus.Tree('spectroscopy', shot)
-    velNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.W:VEL')
+fig2d = np.load('figure2.npz')
 
-    vtime = velNode.dim_of().data()
-    nltime = nl04Node.dim_of().data()
+plt.plot(fig2d['hys01'][0,:], fig2d['hys01'][1,:], marker='.', c=(1.0, 0.5, 0.0))
+plt.plot(fig2d['hys02'][0,:], fig2d['hys02'][1,:], marker='.', c='m')
+plt.plot(fig2d['hys03'][0,:], fig2d['hys03'][1,:], marker='.', c='c')
 
+plt.axhspan(3, 8, xmax=0.73, color=(1.0,0.7,0.7))
+plt.axhspan(-16, -11, xmin=0.36, color=(0.7,0.7,1.0))
 
-    vlow = np.searchsorted(vtime, 0.55)
-    vhigh = np.searchsorted(vtime, 1.25)+2
-
-    vtime = vtime[vlow:vhigh]
-    vdata = velNode.data()[0]
-    vdata = vdata[vlow:vhigh]
-
-    nlData = np.interp(vtime, nltime, nl04Node.data())/1e20/0.6
-    offset = ((shot%100)-4.0)/(25.0-7.0)*6
-
-    ax.plot(nlData, vdata+offset, label=str(shot), marker='.', c=c)
-    
-fig2 = plt.figure(2, figsize=(3.375, 3.375*1.5))
-gs2 = mpl.gridspec.GridSpec(2,1)
-
-ax20 = plt.subplot(gs2[0])
-ax21 = plt.subplot(gs2[1])
-
-plotHysteresis(1160506007, ax20, c='k')
-plotHysteresis(1160506008, ax20, c='c')
-plotHysteresis(1160506024, ax20, c='m')
-
-plotHysteresis(1160506009, ax21, c='c')
-plotHysteresis(1160506010, ax21, c='m')
-
-ax20.axhspan(3, 8, xmax=0.73, color=(1.0,0.7,0.7))
-ax20.axhspan(-16, -11, xmin=0.36, color=(0.7,0.7,1.0))
-
-ax21.set_xlim([1.05, 1.55])
-ax21.axhspan(17, 25, xmax=0.63, color=(1.0,0.7,0.7))
-ax21.axhspan(-7, -2, xmin=0.38, color=(0.7,0.7,1.0))
 
 #fig2.add_subplot(111, frameon=False)
 #plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
@@ -123,21 +88,22 @@ ax21.axhspan(-7, -2, xmin=0.38, color=(0.7,0.7,1.0))
 #plt.xlabel(r'$\bar{n}_e$ [$10^{20} \mathrm{m}^{-3}$]')
 #plt.ylabel(r'$v_{tor}$ [km/s]')
 
-ax20.set_ylabel(r'$v_{tor}$ (km/s)')
-ax20.set_xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
-ax21.set_xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
-ax21.set_ylabel(r'$v_{tor}$ (km/s)')
+plt.ylabel(r'$v_{tor}$ (km/s)')
+plt.xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
 
-plt.tight_layout(h_pad=1.08)
-plt.tight_layout(h_pad=1.08)
+plt.tight_layout()
+plt.tight_layout()
 
 plt.savefig('figure2.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 3: Profile matched plots
 
 
-fig3 = plt.figure(3, figsize=(3.375*2,3.375))
-gs3 = mpl.gridspec.GridSpec(2, 3, hspace=0.00)
+fig3 = plt.figure(3, figsize=(3.375*2,3.375*0.75))
+gs3o = mpl.gridspec.GridSpec(1, 2, width_ratios=[3,1])
+gs3 = mpl.gridspec.GridSpecFromSubplotSpec(2, 3, subplot_spec=gs3o[0], hspace=0.0)
+gs3i = mpl.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs3o[1], hspace=0.0)
+#gs3 = mpl.gridspec.GridSpec(2, 4, hspace=0.00)
 
 ax300 = plt.subplot(gs3[0,0])
 ax310 = plt.subplot(gs3[1,0], sharex=ax300)
@@ -147,6 +113,9 @@ ax311 = plt.subplot(gs3[1,1], sharex=ax300)
 
 ax302 = plt.subplot(gs3[0,2], sharex=ax300)
 ax312 = plt.subplot(gs3[1,2], sharex=ax300)
+
+ax303 = plt.subplot(gs3i[0])
+ax313 = plt.subplot(gs3i[1], sharex=ax303)
 
 fig3_profs = np.load('fig3_data1.npy')
 fig3_nedata_loc = np.load('fig3_data2a.npy')
@@ -179,30 +148,21 @@ plt.setp(ax300.get_xticklabels(), visible=False)
 plt.setp(ax301.get_xticklabels(), visible=False)
 plt.setp(ax302.get_xticklabels(), visible=False)
 
+
+fig32 = np.load('figure3_2.npz')
+
+ax302.errorbar(fig32['loc_rho'], fig32['loc_prof'], fig32['loc_err'], c='r')
+ax302.errorbar(fig32['soc_rho'], fig32['soc_prof'], fig32['soc_err'], c='b')
+
+ax312.errorbar(fig32['loc_rho'], fig32['alti_loc'], fig32['alti_loc_err'], c='r')
+ax312.errorbar(fig32['soc_rho'], fig32['alti_soc'], fig32['alti_soc_err'], c='b')
+
 ax300.set_xlim([0.0, 1.0])
-ax310.set_ylim([-0.05, 2.4])
-ax311.set_ylim([-0.05, 7.8])
+#ax310.set_ylim([-0.05, 2.4])
 ax301.set_ylim([0.0, 2.1])
-
-time_index = 20
-radial_index = 25
-
-bsti_soc = tifit_soc.bsti[time_index][0][0][0]
-bsti_loc = tifit_loc.bsti[time_index][0][0][0]
-
-ax302.errorbar(bsti_loc['rho'][::2], bsti_loc['prof'][::2]-0.12, bsti_loc['err'][::2], c='r')
-ax302.errorbar(bsti_soc['rho'][::2], bsti_soc['prof'][::2]-0.12, bsti_soc['err'][::2], c='b')
-
-alti_soc = -bsti_soc['dprof']/(bsti_soc['prof']-0.12)
-alti_soc_err = np.sqrt(alti_soc**2 * (bsti_soc['err']**2 / (bsti_soc['prof']-0.12)**2 + bsti_soc['derr']**2/bsti_soc['dprof']**2))
-alti_loc = -bsti_loc['dprof']/(bsti_loc['prof']-0.12)
-alti_loc_err = np.sqrt(alti_loc**2 * (bsti_loc['err']**2 / (bsti_loc['prof']-0.12)**2 + bsti_loc['derr']**2/bsti_loc['dprof']**2))
-
-ax312.errorbar(bsti_loc['rho'][::2], alti_loc[::2], alti_loc_err[::2], c='r')
-ax312.errorbar(bsti_soc['rho'][::2], alti_soc[::2], alti_soc_err[::2], c='b')
-
 ax302.set_ylim([0.0, 2.1])
-ax312.set_ylim([-0.05, 4.8])
+ax311.set_ylim([-0.05, 7.2])
+#ax312.set_ylim([-0.05, 7.2])
 
 ax310.set_xlabel('r/a')
 ax311.set_xlabel('r/a')
@@ -215,86 +175,14 @@ ax310.text(0.1, 0.7, '$a/L_{ne}$', transform=ax310.transAxes)
 ax311.text(0.1, 0.7, '$a/L_{Te}$', transform=ax311.transAxes)
 ax312.text(0.1, 0.7, '$a/L_{Ti}$', transform=ax312.transAxes)
 
-plt.tight_layout()
-plt.tight_layout()
 
-plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
+ax51 = ax303
+ax52 = ax313
 
-# %%
+cgyro_freqs = np.load('./cgyro_outputs/all_freqs.npz')
 
-
-# %% Figure 4: Reflecometer plots
-
-elecTree = MDSplus.Tree('electrons', 1160506007)
-
-# 9 and 10 are normally the best
-sig88ui = elecTree.getNode('\ELECTRONS::TOP.REFLECT.CPCI:DT132_1:INPUT_09').data()
-sig88uq = elecTree.getNode('\ELECTRONS::TOP.REFLECT.CPCI:DT132_1:INPUT_10').data()
-sig88ut = elecTree.getNode('\ELECTRONS::TOP.REFLECT.CPCI:DT132_1:INPUT_09').dim_of().data()
-
-ci = np.mean(sig88ui)
-cq = np.mean(sig88uq)
-
-nl04Node = elecTree.getNode('\ELECTRONS::TOP.TCI.RESULTS:NL_04')
-
-
-t1, t2 = np.searchsorted(sig88ut, (0.4,1.6))
-#0.5944-0.5954
-#0.9625-0.9650
-
-si = sig88ui[t1:t2]
-sq = sig88uq[t1:t2]
-st = sig88ut[t1:t2]
-ci = np.median(si)
-cq = np.median(sq)
-z = (si-ci)+1j*(sq-cq)
-
-
-# %%
-t_soc, t_loc = np.searchsorted(st, (0.5949, 0.9637))
-
-total_samples=4096*2
-down_samples =512
-
-z_soc = z[t_soc-total_samples/2:t_soc+total_samples/2]
-z_loc = z[t_loc-total_samples/2:t_loc+total_samples/2]
-
-fz_soc = np.fft.fftshift(np.fft.fft(z_soc))/2e3/2e3
-fz_loc = np.fft.fftshift(np.fft.fft(z_loc))/2e3/2e3
-freqs = np.fft.fftshift(np.fft.fftfreq(total_samples, 1.0/2e6))
-
-fig4 = plt.figure(4, figsize=(3.375, 3.375*0.75))
-
-Sxx_loc_down = np.real(np.average(np.reshape(fz_loc*np.conjugate(fz_loc), (down_samples, -1)), axis=-1))
-Sxx_soc_down = np.real(np.average(np.reshape(fz_soc*np.conjugate(fz_soc), (down_samples, -1)), axis=-1))
-
-f_down = np.average(np.reshape(freqs/1e3, (down_samples, -1)), axis=-1)
-
-plt.semilogy(f_down, Sxx_soc_down, c='b')
-plt.semilogy(f_down, Sxx_loc_down, c='r')
-plt.xlim([-450,450])
-plt.xlabel('f (kHz)')
-plt.ylim([1e-13, 1e-8])
-plt.ylabel('(arb. units)')
-plt.text(160, 1e-9, 'r/a = 0.53')
-
-plt.tight_layout(h_pad=1.08)
-plt.tight_layout(h_pad=1.08)
-
-plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
-
-# %% Figure 5: Growth rates / real frequencies.
-# Note: The data here is generated from ~/hys2/plot_all_freqs.py
-
-fig5 = plt.figure(5, figsize=(3.375, 3.375*0.75))
-gs5 = mpl.gridspec.GridSpec(2, 1, hspace=0.0)
-
-ax51 = plt.subplot(gs5[0])
-ax52 = plt.subplot(gs5[1], sharex=ax51)
-
-cgyro_freqs = np.load(file('./cgyro_outputs/all_freqs.npz'))
-
-for fold in reversed(cgyro_freqs['folders']):
+for foldb in reversed(cgyro_freqs['folders']):
+    fold = foldb.decode("utf-8")
     data = cgyro_freqs[fold]
     
     ky = data[0,:]
@@ -343,10 +231,37 @@ ax52.set_ylabel(r'$\gamma$ ($c_s/a$)')
 #ax52.yaxis.set_minor_locator(mpl.ticker.MultipleLocator(0.05))
 ax52.set_xlabel(r'$k_y \rho_s$')
 
-plt.tight_layout(h_pad=0.0)
-plt.tight_layout(h_pad=0.0)
+plt.tight_layout(h_pad=0.0, w_pad=0.08)
+plt.tight_layout(h_pad=0.0, w_pad=0.08)
 
-plt.savefig('figure5.eps', format='eps', dpi=1200, facecolor='white')
+plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
+
+# %% Figure 4: Reflecometer plots
+
+fig4 = plt.figure(4, figsize=(3.375, 3.375*0.75))
+
+fig4d = np.load('figure4.npz')
+
+Sxx_loc_down = fig4d['Sxx_loc_down']
+Sxx_soc_down = fig4d['Sxx_soc_down']
+f_down = fig4d['f_down']
+
+plt.semilogy(f_down, Sxx_soc_down, c='b')
+plt.semilogy(f_down, Sxx_loc_down, c='r')
+plt.xlim([-450,450])
+plt.xlabel('f (kHz)')
+plt.ylim([1e-13, 1e-8])
+plt.ylabel('(arb. units)')
+plt.text(160, 1e-9, 'r/a = 0.53')
+
+plt.tight_layout()
+plt.tight_layout()
+
+plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
+
+# %% Figure 5: Growth rates / real frequencies.
+# Note: The data here is generated from ~/hys2/plot_all_freqs.py
+
 
 # %% Figure 6: QL weights - need to go on engaging, also what to do with flux data?
 
@@ -425,3 +340,63 @@ ax60.text(1.25, 2.5, 'II')
 ax60.text(6.0, 2.5, 'III')
 
 plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')
+
+
+# %% Figure 7, the cartoon
+
+fig7 = plt.figure(7, figsize=(3.375, 3.375*0.8))
+
+
+gs7 = mpl.gridspec.GridSpec(2, 1, height_ratios=[3,4])
+gs7_inner = mpl.gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs7[0], wspace=0.5)
+
+ax70 = plt.subplot(gs7[1])
+ax710 = plt.subplot(gs7_inner[0])
+ax711 = plt.subplot(gs7_inner[1])
+
+kplot = np.linspace(0.02, 1.4, 128)
+
+def lorentzian(ky, k0, g):
+    return 1.0/(np.pi * g * (1 + ((ky-k0)/g)**2))
+
+def model_wqi(ky):
+    return 2.0*(1-(ky/1.6)**0.5)
+
+#gmax = np.max(gamma(kplot))
+#mixing = gamma(kplot)/kplot
+
+#plt.plot(kplot, wqi(kplot))
+
+loc_spectrum = lorentzian(kplot, 0.5, 0.25) * model_wqi(kplot)
+soc_spectrum = lorentzian(kplot, 0.5, 0.16) * model_wqi(kplot)
+
+
+loc_spectrum = loc_spectrum / np.sum(loc_spectrum) * 2 / 1.8 * 100
+soc_spectrum = soc_spectrum / np.sum(soc_spectrum) * 2 / 1.8 * 100
+
+ax70.plot(kplot, loc_spectrum, c='r')
+ax70.plot(kplot, soc_spectrum, c='b')
+ax70.set_ylim(bottom=0)
+
+xbar = np.arange(4)
+barlabels=['Ia', 'Ib', 'II', 'III']
+soc_values = [0.3, 1.8, 0.0, 0.33]
+loc_values = [0.6, 1.4, 0.2, 0.3]
+
+ax70.set_xlabel(r'$k_y \rho_s$')
+ax70.set_ylabel(r'$W_{Qi,k} \left\langle \bar{\phi}_{k_1}^2 \right\rangle$ (arb. units)')
+ax70.set_title('Example Ion Heat Flux Spectrum')
+
+ax710.bar(xbar, loc_values, color='r', align='center', tick_label=barlabels)
+ax711.bar(xbar, soc_values, color='b', align='center', tick_label=barlabels)
+
+ax710.set_title('LOC')
+ax711.set_title('SOC')
+ax710.set_ylim([0,2])
+ax711.set_ylim([0,2])
+ax710.set_ylabel('Intensity (a.u.)')
+
+plt.tight_layout()
+plt.tight_layout()
+
+plt.savefig('figure7.eps', format='eps', dpi=1200, facecolor='white')
