@@ -332,8 +332,15 @@ def calculateInstrumentals(shot, module, plotting=True, writeToTree=False):
         instNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.CALIB.'+module+':INST')
         instNode.putData(newInst)
     
-    return ishift, itemp, np.flipud(m1_grid.T), np.flipud(m1_grid.T)
+    return lam1_grid, np.flipud(m1_grid.T), np.flipud(m2_grid.T)
 
+def binInstrumentals(shot, module, tht):
+    lamw = 3.94912
+    mAr = 39.948
+    #c = 2.998e+5
+    
+    lam1, m1, m2 = calculateInstrumentals(shot, module)
+    itemp = m2 * mAr / lamw**2 * 1e6
 
 # %% Playing with instrument functions
 """
