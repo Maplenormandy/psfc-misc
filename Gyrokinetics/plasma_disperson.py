@@ -42,8 +42,8 @@ def dispfprime2(ma, za, na, zd, tau):
 
 
 
-x = np.linspace(-10, 10, num=255)
-y = np.linspace(-10, 10, num=255)
+x = np.linspace(-7, 7, num=255)
+y = np.linspace(-7, 7, num=255)
 xx, yy = np.meshgrid(x,y)
 zz = xx + 1j * yy
 
@@ -66,7 +66,7 @@ plotdisp(1.7, axes[0,1])
 plotdisp(2.0, axes[0,2])
 plotdisp(2.1, axes[1,0])
 plotdisp(2.3, axes[1,1])
-plotdisp(2.5, axes[1,2])
+plotdisp(6.0, axes[1,2])
 
 #plt.contour(xx, yy, np.imag(ww), levels=np.logspace(-1,1,num=5), colors='black')
 
@@ -83,7 +83,7 @@ guess2 = -375.847-1.8833j
 guesses = [guess0, guess1, guess2]
 
 
-naup = np.arange(1.8, 2.8, 0.05)
+naup = np.arange(1.8, 8.0, 0.2)
 rootup = np.zeros((len(naup), len(guesses)), dtype=np.complex)
 rootup[0,:] = guesses
 
@@ -122,42 +122,31 @@ plt.colorbar()
 
 def responsef(v, m, z, za, na, zd, tau):
     return (zd * (1 + (v**2/2 + m - 1.5)*na) + v * za) * tau / (z - v) * np.exp(-v**2 / 2.0 -m) / np.sqrt(2.0 * np.pi)
+    
+def resonantIntegrate(f, z):
+    fre = lambda v, m: np.real(f(v, m))
+    fim = lambda v, m: np.imag(f(v, m))
+    
+    re = scipy.integrate.dblquad(fre, 0.0, 25.0, lambda x: -25.0, lambda x: z-0.3, epsabs=1e-4, epsrel=1e-4)[0] + \
+         scipy.integrate.dblquad(fre, 0.0, 25.0, lambda x: z-0.3, lambda x: z+0.3, epsabs=1e-4, epsrel=1e-4)[0] + \
+         scipy.integrate.dblquad(fre, 0.0, 25.0, lambda x: z+0.3, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
+    im = scipy.integrate.dblquad(fim, 0.0, 25.0, lambda x: -25.0, lambda x: z-0.3, epsabs=1e-4, epsrel=1e-4)[0] + \
+         scipy.integrate.dblquad(fim, 0.0, 25.0, lambda x: z-0.3, lambda x: z+0.3, epsabs=1e-4, epsrel=1e-4)[0] + \
+         scipy.integrate.dblquad(fim, 0.0, 25.0, lambda x: z+0.3, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
+    return re + 1j * im
 
 def densf(z, za, na, zd, tau):
-    rfre = lambda v, m: np.real(responsef(v,m,z,za,na,zd,tau))
-    rfim = lambda v, m: np.imag(responsef(v,m,z,za,na,zd,tau))
-    
-    nre = scipy.integrate.dblquad(rfre, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    nim = scipy.integrate.dblquad(rfim, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    
-    return nre + 1j * nim
+    return resonantIntegrate(lambda v, m: responsef(v,m,z,za,na,zd,tau), z)
+
 
 def tempvf(z, za, na, zd, tau):
-    rfre = lambda v, m: np.real(responsef(v,m,z,za,na,zd,tau)) * (v**2/2.0 - 0.5)
-    rfim = lambda v, m: np.imag(responsef(v,m,z,za,na,zd,tau)) * (v**2/2.0 - 0.5)
-    
-    nre = scipy.integrate.dblquad(rfre, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    nim = scipy.integrate.dblquad(rfim, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    
-    return nre + 1j * nim
+    return resonantIntegrate(lambda v, m: responsef(v,m,z,za,na,zd,tau) * (v**2/2.0 - 0.5), z)
     
 def tempmf(z, za, na, zd, tau):
-    rfre = lambda v, m: np.real(responsef(v,m,z,za,na,zd,tau)) * (m - 1.0)
-    rfim = lambda v, m: np.imag(responsef(v,m,z,za,na,zd,tau)) * (m - 1.0)
-    
-    nre = scipy.integrate.dblquad(rfre, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    nim = scipy.integrate.dblquad(rfim, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    
-    return nre + 1j * nim
+    return resonantIntegrate(lambda v, m: responsef(v,m,z,za,na,zd,tau) * (m - 1.0), z)
     
 def vf(z, za, na, zd, tau):
-    rfre = lambda v, m: np.real(responsef(v,m,z,za,na,zd,tau)) * v
-    rfim = lambda v, m: np.imag(responsef(v,m,z,za,na,zd,tau)) * v
-    
-    nre = scipy.integrate.dblquad(rfre, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    nim = scipy.integrate.dblquad(rfim, 0.0, 25.0, lambda x: -25.0, lambda x: 25.0, epsabs=1e-4, epsrel=1e-4)[0]
-    
-    return nre + 1j * nim
+    return resonantIntegrate(lambda v, m: responsef(v,m,z,za,na,zd,tau) * v, z)
 
 # %%
 
@@ -171,7 +160,7 @@ ertm = np.zeros(rootup.shape, dtype=np.complex)
 erv = np.zeros(rootup.shape, dtype=np.complex)
 
 for i in range(len(naup)):
-    for j in range(len(guesses)):
+    for j in [1]:
         print i,j
         irn[i,j] = densf(rootup[i,j], 1.0, naup[i], 5.0, 1.0)
         irtv[i,j] = tempvf(rootup[i,j], 1.0, naup[i], 5.0, 1.0)
@@ -184,10 +173,12 @@ for i in range(len(naup)):
 
 # %%
 
-j = 0
+j = 1
 #plt.scatter(np.imag(rootup[:,j]), -np.imag(irn[:,j]), c=naup, cmap='cubehelix')
-plt.scatter(np.real((irtv[:,j]+irn[:,j])/irv[:,j]), np.imag((irtv[:,j]+irn[:,j])/irv[:,j]), c=naup, cmap='cubehelix')
+#plt.scatter(np.real(irn[:,j]), np.imag(irn[:,j]), c=naup, cmap='cubehelix')
+#plt.scatter(np.real((irtv[:,j]+irn[:,j])/irv[:,j]), np.imag((irtv[:,j]+irn[:,j])/irv[:,j]), c=naup, cmap='cubehelix')
 #plt.scatter(np.real(irv[:,j]), np.imag(irv[:,j]), c=naup, cmap='cubehelix')
+plt.scatter(np.imag(rootup[:,j]), -np.imag(irtm[:,j]+irtv[:,j])-np.imag(ertm[:,j]+ertv[:,j]), c=naup, cmap='cubehelix')
 #plt.scatter(np.imag(rootup[:,j]), -np.imag(ertm[:,j]+ertv[:,j]), c=naup, cmap='cubehelix')
 plt.axhline(c='k', ls='--')
 plt.axvline(c='k', ls='--')
