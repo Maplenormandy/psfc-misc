@@ -53,15 +53,21 @@ rgam = np.array([ 0.35  , 0.425 , 0.5  ,  0.575 , 0.65 ,  0.725 , 0.8  ])
 ggam = np.array([ 0.027435 , 0.076341,  0.12212 ,  0.16693 ,  0.20676 ,  0.22962 ,  0.52844  ])
 
 
-plt.figure(figsize=(3.375, 3.375*0.75))
-plt.plot(roa_soc[10:-15], -gammae_soc[10:-15], c='b')
-plt.plot(roa_loc[10:-15], -gammae_loc[10:-15], c='r')
+plt.figure(figsize=(3.375*0.9, 3.375*0.75*0.8))
+ax = plt.subplot(111)
+plt.plot(roa_soc[:], -gammae_soc[:], c='b')
+plt.plot(roa_loc[:], -gammae_loc[:], c='r')
 plt.plot(rgam[:5], ggam[:5], marker='o', c='b')
 plt.axhline(ls='--', c='k')
 plt.ylabel(r'$[a/c_s]$')
 plt.xlabel('r/a')
-plt.xlim([0.35, 0.7])
+plt.xlim([0.25, 0.75])
+#ax3i.set_xlim([0.25, 0.75])
+plt.ylim([-.05, .19])
 plt.tight_layout()
 
+plt.text(0.2, 0.65, '$\gamma_{\mathrm{max}}$', transform=ax.transAxes)
+plt.text(0.5, 0.26, '$\gamma_{E}$', transform=ax.transAxes)
 
-plt.savefig('supp_figure2.eps', format='eps', dpi=1200, facecolor='white')
+
+plt.savefig('shear_locsoc.pdf', format='pdf', dpi=1200, facecolor='white')

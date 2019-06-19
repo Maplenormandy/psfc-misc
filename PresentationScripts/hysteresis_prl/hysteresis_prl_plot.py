@@ -66,7 +66,7 @@ ax12.set_xlabel('r/a')
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('figure1.eps', format='eps', dpi=1200)
+#plt.savefig('figure1.eps', format='eps', dpi=1200)
 
 # %% Figure 2: Hysteresis plot
 
@@ -94,7 +94,7 @@ plt.xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('figure2.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure2.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 3: Profile matched plots
 
@@ -234,7 +234,7 @@ ax52.set_xlabel(r'$k_y \rho_s$')
 plt.tight_layout(h_pad=0.0, w_pad=0.08)
 plt.tight_layout(h_pad=0.0, w_pad=0.08)
 
-plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 4: Reflecometer plots
 
@@ -257,7 +257,7 @@ plt.text(160, 1e-9, 'r/a = 0.53')
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 5: Growth rates / real frequencies.
 # Note: The data here is generated from ~/hys2/plot_all_freqs.py
@@ -339,7 +339,7 @@ ax60.text(0.6, 2.5, 'Ib')
 ax60.text(1.25, 2.5, 'II')
 ax60.text(6.0, 2.5, 'III')
 
-plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')
 
 
 # %% Figure 7, the cartoon
@@ -399,4 +399,4 @@ ax710.set_ylabel('Intensity (a.u.)')
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('figure7.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure7.eps', format='eps', dpi=1200, facecolor='white')

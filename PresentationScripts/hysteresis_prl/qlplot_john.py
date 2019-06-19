@@ -92,4 +92,4 @@ ax61.xaxis.set_ticks_position('bottom')
 plt.tight_layout(w_pad=0.2)
 plt.tight_layout(w_pad=0.2)
 
-plt.savefig('qlweights_locsoc.eps', format='eps', dpi=1200, facecolor='white')
+plt.savefig('qlweights_locsoc.pdf', format='pdf', dpi=1200, facecolor='white')

@@ -14,7 +14,7 @@ import matplotlib as mpl
 
 font = {'family' : 'serif',
         'serif': ['Computer Modern'],
-        'size'   : 10}
+        'size'   : 9}
 
 mpl.rc('font', **font)
 
@@ -64,7 +64,7 @@ omega = scipy.interpolate.interp1d(ky, freqs[1,:])
 gamma = scipy.interpolate.interp1d(ky, freqs[2,:])
 
 # %%
-fig7 = plt.figure(7, figsize=(3.375, 3.375))
+fig7 = plt.figure(7, figsize=(3.375, 3.375*0.9))
 
 
 gs7 = mpl.gridspec.GridSpec(2, 1, height_ratios=[1,2])
@@ -88,7 +88,7 @@ def model_wqi(ky):
 #plt.plot(kplot, wqi(kplot))
 
 loc_spectrum = lorentzian(kplot, 0.5, 0.25) * model_wqi(kplot)
-soc_spectrum = lorentzian(kplot, 0.5, 0.16) * model_wqi(kplot)
+soc_spectrum = lorentzian(kplot, 0.55, 0.12) * model_wqi(kplot)
 
 
 loc_spectrum = loc_spectrum / np.sum(loc_spectrum) * 2 / 1.8 * 100
@@ -100,7 +100,7 @@ ax70.set_ylim(bottom=0)
 
 xbar = np.arange(4)
 barlabels=['Ia', 'Ib', 'II', 'III']
-soc_values = [0.3, 1.8, 0.0, 0.33]
+soc_values = [0.0, 2.2, 0.0, 0.33]
 loc_values = [0.6, 1.4, 0.2, 0.3]
 
 ax70.set_xlabel(r'$k_y \rho_s$')
@@ -119,4 +119,4 @@ ax710.set_ylabel('Intensity (a.u.)')
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('figure7.eps', format='eps', dpi=1200, facecolor='white')
+plt.savefig('locsoc_cartoon.eps', format='eps', dpi=1200, facecolor='white')
