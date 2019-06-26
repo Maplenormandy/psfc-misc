@@ -23,9 +23,9 @@ Possibly visualize obtained Te and Ti fits together by running
 
 from __future__ import division
 import sys
-sys.path.append('/home/sciortino/shot_analysis_tools')
 sys.path.append('/home/sciortino/ML/machinelearnt')
 sys.path.append('/home/sciortino/ML')
+sys.path.append('/home/sciortino/shot_analysis_tools')
 import gptools
 import scipy.special
 #import nlopt
@@ -51,23 +51,11 @@ from profile_unc_estimation import profile_fitting
 plt.ion()
 
 # =================== USER PARAMETERS ==============================
-shot=1160506007; t_min = 0.57; t_max = 0.63; THT = 1
-
-#shot = 1101014019; t_min=1.25; t_max=1.4; THT = 0
-
-#shot = 1101014029; t_min=1.2; t_max=1.3; THT = 1
-
-#shot = 1101014030; t_min=1.2; t_max=1.3; THT = 1
-
-#shot = 1120914029; t_min=1.3; t_max=1.4; THT = 8
-
-#shot = 1120914036; t_min=1.05; t_max=1.27; THT = 0
-
-#shot=1140729030; t_min=1.0; t_max = 1.2; THT=8
-
-#shot=1140729023; t_min=1.0; t_max=1.2; THT=8
-
-#shot=1140729021; t_min=1.4; t_max=1.49; THT=8 #t_min=1.0; t_max=1.2; THT=8
+# For Norman:
+#shot = 1160506007; t_min = 0.57; t_max = 0.63; THT = 0; folder='soc'
+#shot = 1160506007; t_min = 0.93; t_max = 0.99; THT = 0; folder='loc'
+shot = 1150903021; t_min = 1.01; t_max = 1.07; THT = 2; folder=''
+#shot = 1120106012; t_min = 0.89; t_max = 0.95; THT = 0
 
 # choose Ti/Te profile merging point
 merge_point = 0.85
@@ -75,8 +63,9 @@ edge_T = 0.075 # in keV. Profiles will be shifted so that Te is equal to this va
 plot=True
 noise_opt=False   #keep to False
 shift_hirexdata_as_well=True
-save_as_dict=True    #to save results as a Python dictionary
+save_as_dict=False    #to save results as a Python dictionary
 edge_focus=False   #plot results for r/a>0.85 only
+use_MCMC=False
 
 if save_as_dict:
     shift_hirexdata_as_well=False # not yet available, likely not useful/necessary to develop
@@ -129,7 +118,7 @@ def prof_setup(p, bad_idxs=None):
     return prof,sorted_idx
 
 
-def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict):
+def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, use_MCMC=use_MCMC):
     ''' Obtain ne fit either by optimizing over noise or by direct GPR estimate
     '''
     try:
@@ -148,6 +137,7 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
     p_ne.remove_points(p_ne.X[:,1]>1.05)  # Thomson definitely not reliable
     if shot==1101014006: p_ne.remove_points(p_ne.err_y>0.25)  # this eliminates one annoying outlier
     p_ne.time_average(weighted=True, y_method='total')
+    #p_ne.drop_axis(0)
 
     # clean up data
     p=copy.deepcopy(p_ne)
@@ -158,13 +148,16 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
     #                   'l1_sd':0.3,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
-    #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
+    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':1.0,
+	          'l1_sd':3.0,'l2_sd':3.0,'lw_sd':0.1,'x0_sd':0.05}
+
+    # ONLY TESTING FOR NORMAN !!!!!!!
+    #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':8.0,'l2_mean':8.0,'lw_mean':0.1,'x0_mean':0.4,
 	#          'l1_sd':3.0,'l2_sd':3.0,'lw_sd':0.1,'x0_sd':0.05}
-    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':0.3,
-                    'l1_sd':30.0,'l2_sd':30.0,'lw_sd':0.1,'x0_sd':0.05}
 
     res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True,
-	     	         method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=True, **gibbs_params)
+	     	         method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot,use_MCMC=False,
+                         **gibbs_params)
 
     deltas = np.abs(res.m_gp - ne.y)/ res.s_gp #ne.err_y
     deltas[ne.err_y == 0] = 0.0
@@ -180,6 +173,8 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     # grid to evaluate profiles on --> allow GP to extend well beyond LCFS (but don't use values there!)
     xgrid = np.linspace(0,1.15, 200)
+
+    print "Outliers part done"
 
     if noise_opt:
         pass
@@ -197,7 +192,8 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
 	## find statistics for optimized result:
 	#res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-	#	             method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot, **gibbs_params)
+	#	             method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot,
+        #                     use_MCMC=use_MCMC,**gibbs_params)
 
 	#print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
 	#print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
@@ -205,16 +201,17 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     else:
 	res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-		             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot, grad_constr=False, **gibbs_params)
+		             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot, grad_constr=False,
+                             use_MCMC=use_MCMC, **gibbs_params)
 
+    '''
     # get minor radius:
     try:
         t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
     except ValueError:
         print "Data retrieval in eqtools failed, fixing a0 to standard value"
         a0 = 0.21989983
-
-    a0 = 1.0
+    '''
 
     if save_as_dict:
         ne_prof={};
@@ -223,8 +220,10 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         ne_prof['err_y']=res.s_gp
         ne_prof['dy_dX'] = res.gm_gp
         ne_prof['err_dy_dX']=res.gs_gp
-        ne_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
-        ne_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        ne_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #ne_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        ne_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #ne_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         ne_prof['time'] = (t_min+t_max)/2.0
 
         if dst!=None:
@@ -241,8 +240,10 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         ne_prof.err_y = res.s_gp
         ne_prof.dy_dx = res.gm_gp
         ne_prof.err_dy_dx = res.gs_gp
-        ne_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
-        ne_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        ne_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #ne_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        ne_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #ne_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         ne_prof.time = (t_min+t_max)/2.0
 
         if dst!=None:
@@ -251,8 +252,8 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
             print 'saved file ' +dst+'/ne_prof_%d_FS.pkl'%shot
 
     if plot:
-	plt.xlabel(r'$r/a$', fontsize=16)
-	plt.ylabel(r'$n_e [m^{-3}]$', fontsize=16)
+	plt.xlabel(r'$r/a$')
+	plt.ylabel(r'$n_e [m^{-3}]$')
 	if edge_focus: plt.xlim([0.8,1.05])
 
         plt.figure()
@@ -267,7 +268,7 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
             plt.errorbar(ne_prof.x, ne_prof.a_Ly, ne_prof.err_a_Ly, fmt='*')
         else:
             plt.errorbar(ne_prof['X'], ne_prof['a_Ly'], ne_prof['err_a_Ly'], fmt='*')
-        plt.xlabel('r/a'); plt.ylabel('a/Lne'); plt.ylim([-1,20])
+        plt.xlabel('r/a'); plt.ylabel('a/Lne'); plt.ylim([-1,5])
 
         plt.figure()
         if not save_as_dict:
@@ -277,7 +278,7 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         plt.xlabel('r/a'); plt.ylabel('a/Lne fractional uncertainty')
         plt.ylim([0,0.8])
 
-def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict ):
+def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, use_MCMC=use_MCMC):
     '''
 	    Get te fit either by optimizing over noise or by direct GPR fitting
     '''
@@ -313,15 +314,12 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
     Te,sorted_idx = prof_setup(p)
     time = [t_min, t_max]
 
-    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':0.3,
-                    'l1_sd':30.0,'l2_sd':30.0,'lw_sd':0.1,'x0_sd':0.05}
-
-
-    #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
-	#          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
+	          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
 
     res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True,
-	     	         method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=True, **gibbs_params)
+	     	         method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot,
+                         use_MCMC=False, **gibbs_params)
 
     deltas = np.abs(res.m_gp - Te.y)/ res.s_gp #Te.err_y
     deltas[Te.err_y == 0] = 0.0
@@ -336,6 +334,8 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     # grid to evaluate profiles on --> allow GP to extend well beyond LCFS (but don't use values there!)
     xgrid = np.linspace(0,1.15, 200)
+
+    print "Outliers done"
 
     if noise_opt:
         pass
@@ -353,7 +353,8 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
 	## find statistics for optimized result:
 	#res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-	#     	             method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot, **gibbs_params)
+	#     	             method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot,
+        #                     use_MCMC=use_MCMC,**gibbs_params)
 
 	#print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
 	#print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
@@ -361,12 +362,11 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     else:
 	res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True,grid=xgrid, compute_gradients=True,
-	     	             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot, **gibbs_params)
+	     	             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot,
+                             use_MCMC=use_MCMC, **gibbs_params)
 
     # get minor radius:
-    t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
-
-    a0 = 1.0
+    #t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
 
     if save_as_dict:
         Te_prof={};
@@ -375,8 +375,10 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         Te_prof['err_y']=res.s_gp
         Te_prof['dy_dX'] = res.gm_gp
         Te_prof['err_dy_dX']=res.gs_gp
-        Te_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
-        Te_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        Te_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #Te_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        Te_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #Te_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         Te_prof['time'] = (t_min+t_max)/2.0
 
         if dst!=None:
@@ -393,8 +395,10 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         Te_prof.err_y = res.s_gp
         Te_prof.dy_dx = res.gm_gp
         Te_prof.err_dy_dx = res.gs_gp
-        Te_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
-        Te_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        Te_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #Te_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        Te_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #Te_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         Te_prof.time = (t_min+t_max)/2.0
 
         if dst!=None:
@@ -403,8 +407,8 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 	    print 'saved file ' +dst+'/te_prof_%d_FS.pkl'%shot
 
     if plot:
-	plt.xlabel(r'$r/a$', fontsize=16)
-	plt.ylabel(r'$T_e$ [keV]', fontsize=14)
+	plt.xlabel(r'$r/a$')
+	plt.ylabel(r'$T_e$ [keV]')
         if edge_focus: plt.xlim([0.8,1.05])
 
         plt.figure()
@@ -433,7 +437,7 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
 
 def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_point,
-               plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, override_shot=shot):
+               plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict):
     '''
     Get ti profile by merging with te fit
     '''
@@ -475,8 +479,12 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
         ti_err_y[(ti_y<0) | (ti_err_y>0.8)] = np.nan
 
     # load te
-    with open(dst+'/te_prof_%d_FS.pkl'%override_shot, 'rb') as f:
-	te=pkl.load(f)
+    if shot==1120106012:  # Norman's case
+        with open('/home/sciortino/shot_1160506007/transport_profiles/te_prof_1160506007_FS.pkl', 'rb') as f:
+	    te=pkl.load(f)
+    else:
+        with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
+	    te=pkl.load(f)
 
     try:
 	te_x = te.x
@@ -512,10 +520,12 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
 
     ########
     # prior hyperparameters (making priors wider doesn't seem to matter!)
+    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
+	          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+
+    # temporary TEST FOR NORMAN
     #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
-	#          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
-    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':0.3,
-                    'l1_sd':30.0,'l2_sd':30.0,'lw_sd':0.1,'x0_sd':0.05}
+	#          'l1_sd':20.,'l2_sd':20.0,'lw_sd':0.1,'x0_sd':0.05}
 
     #########################
     if noise_opt:
@@ -534,7 +544,7 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
 
 	## find statistics for optimized result:
 	#res = profile_fit_fs(ti.x,ti.y, err_y=ti.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-	#	     kernel='gibbs', noiseLevel=psi,debug_plots=plot, **gibbs_params)
+	#	     kernel='gibbs', noiseLevel=psi,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
 
 	#plt.xlabel(r'$r/a$', fontsize=16)
 	#plt.ylabel(r'$T_i [m^{-3}]$', fontsize=16)
@@ -545,12 +555,10 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
     else:
 	# direct estimate for given noise:
 	res = profile_fit_fs(ti.x, ti.y, err_y=ti.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-		             kernel='gibbs', noiseLevel=2.0,debug_plots=True, **gibbs_params)
+		             kernel='gibbs', noiseLevel=2.0,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
 
     # get minor radius:
-    t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
-
-    a0 = 1.0
+    #t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
 
     if save_as_dict:
         Ti_prof={};
@@ -559,8 +567,10 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
         Ti_prof['err_y']=res.s_gp
         Ti_prof['dy_dX'] = res.gm_gp
         Ti_prof['err_dy_dX']=res.gs_gp
-        Ti_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
-        Ti_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        Ti_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #Ti_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        Ti_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #Ti_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         Ti_prof['time'] = (t_min+t_max)/2.0
 
         if dst!=None:
@@ -577,9 +587,10 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
         Ti_prof.err_y = res.s_gp
         Ti_prof.dy_dx = res.gm_gp
         Ti_prof.err_dy_dx = res.gs_gp
-        Ti_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp) #np.abs(a0 * res.m_gp / res.gm_gp)
-        Ti_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #Ti_prof.err_a_Ly = a0 * np.sqrt((1./res.gm_gp)**2 *  res.s_gp **2 + (res.m_gp/res.gm_gp**2)**2 * res.gs_gp **2)
+        Ti_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #Ti_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        Ti_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #Ti_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         Ti_prof.time = (t_min+t_max)/2.0
 
         # save updated/combined Ti profile:
@@ -609,7 +620,7 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
             plt.errorbar(Ti_prof.x, Ti_prof.a_Ly, Ti_prof.err_a_Ly, fmt='*')
         else:
             plt.errorbar(Ti_prof['X'], Ti_prof['a_Ly'], Ti_prof['err_a_Ly'], fmt='*')
-        plt.xlabel('r/a'); plt.ylabel('a/LTi'); plt.ylim([-1,20])
+        plt.xlabel('r/a'); plt.ylabel('a/LTi'); plt.ylim([-1,5])
 
         plt.figure()
         if not save_as_dict:
