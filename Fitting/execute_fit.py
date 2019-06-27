@@ -19,7 +19,7 @@ def f(x):
     elif x == 3:
         get_te_fit(shot=1160506007, t_min=0.93, t_max=0.99, dst=dst+'loc', plot=False, use_MCMC=mcmc)
     elif x == 4:
-        get_ne_fit(shot=1150903021, t_min=1.01, t_max=1.07, dst=dst+'old', plot=False, use_MCMC=mcmc)
+        get_ne_fit(shot=1150903021, t_min=1.03, t_max=1.09, dst=dst+'old', plot=False, use_MCMC=mcmc)
 
     return 0
 

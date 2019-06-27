@@ -1,0 +1,73 @@
+WARNING:root:Deprecation Warning: 'triangle' has been renamed to 'corner'. This shim should continue to work but you should use 'import corner' in new code. https://github.com/dfm/corner.py
+/home/normandy/git/eqtools/eqtools/AUGData.py:38: ModuleWarning: dd module could not be loaded -- classes that use dd for data access will not work.
+  ModuleWarning)
+Loaded NC version
+Traceback (most recent call last):
+  File "execute_fit.py", line 26, in <module>
+    f(case)
+  File "execute_fit.py", line 22, in f
+    get_ne_fit(shot=1150903021, t_min=1.03, t_max=1.09, dst=dst+'old', plot=False, use_MCMC=mcmc)
+  File "/home/normandy/git/psfc-misc/Fitting/profiles_fits.py", line 135, in get_ne_fit
+    raise ValueError("Problems fetching TS data!")
+ValueError: Problems fetching TS data!
+WARNING:root:Deprecation Warning: 'triangle' has been renamed to 'corner'. This shim should continue to work but you should use 'import corner' in new code. https://github.com/dfm/corner.py
+/home/normandy/git/eqtools/eqtools/AUGData.py:38: ModuleWarning: dd module could not be loaded -- classes that use dd for data access will not work.
+  ModuleWarning)
+Loaded NC version
+/home/normandy/git/eqtools/eqtools/core.py:8904: RuntimeWarning: Some time points are off by more than 1/3 the EFIT point spacing. Using nearest-neighbor interpolation between time points. You may want to run EFIT on the timebase you need. Max error: 0.010s
+  RuntimeWarning
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:324: RuntimeWarning: invalid value encountered in true_divide
+  k[idxs] = (scipy.sqrt(2.0 * lx[idxs] * ly[idxs] / lx2ly2[idxs]) *
+/home/normandy/anaconda/lib/python2.7/site-packages/numpy/lib/scimath.py:120: RuntimeWarning: invalid value encountered in less
+  if any(isreal(x) & (x < 0)):
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:325: RuntimeWarning: divide by zero encountered in true_divide
+  scipy.exp(-x_y[idxs]**2 / lx2ly2[idxs]))
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:325: RuntimeWarning: invalid value encountered in true_divide
+  scipy.exp(-x_y[idxs]**2 / lx2ly2[idxs]))
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:343: RuntimeWarning: divide by zero encountered in true_divide
+  lx[idxs] * (
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:350: RuntimeWarning: divide by zero encountered in true_divide
+  ) / (scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:350: RuntimeWarning: invalid value encountered in true_divide
+  ) / (scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:330: RuntimeWarning: divide by zero encountered in true_divide
+  ly[idxs] * (
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:337: RuntimeWarning: divide by zero encountered in true_divide
+  ) / (scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:337: RuntimeWarning: invalid value encountered in true_divide
+  ) / (scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**2.5)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:355: RuntimeWarning: invalid value encountered in true_divide
+  scipy.exp(-(x_y[idxs]**2 / lx2ly2[idxs])) *
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:394: RuntimeWarning: divide by zero encountered in true_divide
+  ) / (2 * scipy.sqrt(2 * lx[idxs] * ly[idxs]) * lx2ly2[idxs]**4.5)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+Computing Gradients
+Outliers part done
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+MCMC parameter summary:
+param	mean	95% posterior interval
+\sigma_f	2.823	[0.5591, 8.806]
+l_1	3.063	[0.7394, 15.28]
+l_2	3.124	[0.126, 9.468]
+l_w	0.1613	[0.01991, 0.4953]
+x_0	1.008	[0.9135, 1.097]
+Computing Gradients
+saved file /home/normandy/git/psfc-misc/Fitting/mcmc/old/ne_prof_1150903021_FS.pkl
