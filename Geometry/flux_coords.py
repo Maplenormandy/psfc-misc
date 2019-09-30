@@ -122,9 +122,8 @@ system = scipy.integrate.odeint(deriv, statevec, t)
 
 
 
-"""
-system = ode(deriv).set_integrator('lsoda', method='bdf')
-system.set_initial_value(statevec, 0)
+#system = ode(deriv).set_integrator('lsoda', method='bdf')
+#system.set_initial_value(statevec, 0)
 
 plt.figure()
 
@@ -180,7 +179,6 @@ while system.successful() and system.t < t1:
     #plt.plot(sy[0,0,:], sy[0,1,:], marker='o')
     #plt.axis('equal')
     #plt.show()
-"""
     
 # %%
     

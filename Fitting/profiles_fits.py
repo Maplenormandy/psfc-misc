@@ -41,7 +41,8 @@ import MDSplus
 import cPickle as pkl
 import eqtools
 import copy
-from transport_classes import prof_object
+#from transport_classes import prof_object
+import advanced_fitting
 from advanced_fitting import profile_fit_fs
 import pdb
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -49,34 +50,58 @@ from load_hirex_profs import ThacoData
 from profile_unc_estimation import profile_fitting
 
 plt.ion()
+plt.close('all')
 
 # =================== USER PARAMETERS ==============================
 # For Norman:
 #shot = 1160506007; t_min = 0.57; t_max = 0.63; THT = 0; folder='soc'
 #shot = 1160506007; t_min = 0.93; t_max = 0.99; THT = 0; folder='loc'
-shot = 1150903021; t_min = 1.01; t_max = 1.07; THT = 2; folder=''
+#shot = 1150903021; t_min = 1.07; t_max = 1.09; THT = 2; folder=''
 #shot = 1120106012; t_min = 0.89; t_max = 0.95; THT = 0
+#shot = 1160725013; t_min = 0.85; t_max = 1.45; THT = 0
+
+shot = 1120216017; t_min = 1.13; t_max = 1.19; THT = 9
+#shot = 1150903021; t_min = 0.99; t_max = 1.05; THT = 0
 
 # choose Ti/Te profile merging point
-merge_point = 0.85
+merge_point = 0.95
 edge_T = 0.075 # in keV. Profiles will be shifted so that Te is equal to this value at the LCFS
 plot=True
 noise_opt=False   #keep to False
 shift_hirexdata_as_well=True
-save_as_dict=False    #to save results as a Python dictionary
+save_as_dict=True    #to save results as a Python dictionary
 edge_focus=False   #plot results for r/a>0.85 only
 use_MCMC=False
+lastShot = 0
+e = None
+
+gibbs_params_global={
+            'sigma_min':0.1, 'sigma_max':20.0,
+            'l1_mean':1.4, 'l1_sd':0.4,
+            'l2_mean':0.8, 'l2_sd':0.3,
+            'lw_mean':0.2, 'lw_sd':0.1,
+            'x0_mean':0.45, 'x0_sd':0.1
+            }
+se_params_global={
+            'sigma_mean':0.1, 'sigma_sd':1.0,
+            'l_mean':0.1, 'l_sd':0.05
+            }
 
 if save_as_dict:
     shift_hirexdata_as_well=False # not yet available, likely not useful/necessary to develop
 
 # ====================================================================
 
-e = eqtools.CModEFITTree(shot) #,tree='EFIT20')
 dst='/home/normandy/git/psfc-misc/Fitting'
 range_1sd = scipy.special.erf(1/np.sqrt(2))
 range_2sd = scipy.special.erf(2/np.sqrt(2)) - scipy.special.erf(1/np.sqrt(2))
 range_3sd = scipy.special.erf(3/np.sqrt(2)) - scipy.special.erf(2/np.sqrt(2))
+
+class prof_object:
+    def __init__(self, x, y, err_y):
+        self.x = x
+        self.y = y
+        self.err_y = err_y
 
 def MSE_Gaussian_loss(x, grad, xx, y, y_unc, params, kernel):
     #assert len(grad) == 0, "grad is not empty, but it should"
@@ -101,9 +126,9 @@ def prof_setup(p, bad_idxs=None):
         bad_idxs = np.zeros_like(p.y, dtype=bool)
 
     if p.X.shape[1]>1:
-	x = p.X[~bad_idxs,1]
+        x = p.X[~bad_idxs,1]
     else:
-	x = p.X[~bad_idxs,0]
+        x = p.X[~bad_idxs,0]
 
     y = p.y[~bad_idxs]
     y_unc = p.err_y[~bad_idxs]
@@ -118,11 +143,11 @@ def prof_setup(p, bad_idxs=None):
     return prof,sorted_idx
 
 
-def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, use_MCMC=use_MCMC):
+def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, use_MCMC=use_MCMC, c='b', x0_mean=0.45):
     ''' Obtain ne fit either by optimizing over noise or by direct GPR estimate
     '''
     try:
-	p_ne=profiletools.ne(shot, include=['CTS','ETS'],abscissa='r/a',t_min=t_min,t_max=t_max)
+        p_ne=profiletools.ne(shot, include=['CTS','ETS'],abscissa='r/a',t_min=t_min,t_max=t_max)
 
     except:
         # 1101014030 does not have ETS. Use signals from repeat shot 1101014029
@@ -144,19 +169,21 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     # use convenience function
     ne,sorted_idx = prof_setup(p)
-    time = [p.t_min, p.t_max]
+    #time = [p.t_min, p.t_max]
 
     #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
     #                   'l1_sd':0.3,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
-    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':1.0,
-	          'l1_sd':3.0,'l2_sd':3.0,'lw_sd':0.1,'x0_sd':0.05}
+    gibbs_params={'sigma_min':0.1,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':1.0,
+                  'l1_sd':3.0,'l2_sd':3.0,'lw_sd':0.1,'x0_sd':0.05}
+    #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':1.0,'l2_mean':0.5,'lw_mean':0.1,'x0_mean':0.33,
+        #          'l1_sd':3.0,'l2_sd':3.0,'lw_sd':0.1,'x0_sd':0.05}
 
     # ONLY TESTING FOR NORMAN !!!!!!!
-    #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':8.0,'l2_mean':8.0,'lw_mean':0.1,'x0_mean':0.4,
-	#          'l1_sd':3.0,'l2_sd':3.0,'lw_sd':0.1,'x0_sd':0.05}
+    gibbs_params=gibbs_params_global
+    gibbs_params['x0_mean'] = x0_mean
 
     res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True,
-	     	         method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot,use_MCMC=False,
+                              method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=False,use_MCMC=False,color=c,
                          **gibbs_params)
 
     deltas = np.abs(res.m_gp - ne.y)/ res.s_gp #ne.err_y
@@ -178,31 +205,31 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     if noise_opt:
         pass
-	# Uncertainty quantification and re-fitting:
-	#opt = nlopt.opt(nlopt.LN_SBPLX, 1)  # LN_SBPLX
-	#opt.set_lower_bounds([1.0,] * opt.get_dimension())
-	#opt.set_upper_bounds([4.0,] * opt.get_dimension())
-	#opt.set_xtol_abs(0.1)
-	#objective = lambda x,grad: MSE_Gaussian_loss(x,grad, ne.x, ne.y, ne.err_y, gibbs_params, kernel='gibbs')
-	#opt.set_min_objective(objective)
+        # Uncertainty quantification and re-fitting:
+        #opt = nlopt.opt(nlopt.LN_SBPLX, 1)  # LN_SBPLX
+        #opt.set_lower_bounds([1.0,] * opt.get_dimension())
+        #opt.set_upper_bounds([4.0,] * opt.get_dimension())
+        #opt.set_xtol_abs(0.1)
+        #objective = lambda x,grad: MSE_Gaussian_loss(x,grad, ne.x, ne.y, ne.err_y, gibbs_params, kernel='gibbs')
+        #opt.set_min_objective(objective)
 
-	## Launch optimization
-	#psi = opt.optimize(np.asarray([2.0]))[0]
-	#print " *********** Optimized value of psi: ", psi, ' ****************'
+        ## Launch optimization
+        #psi = opt.optimize(np.asarray([2.0]))[0]
+        #print " *********** Optimized value of psi: ", psi, ' ****************'
 
-	## find statistics for optimized result:
-	#res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-	#	             method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot,
+        ## find statistics for optimized result:
+        #res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True, grid=xgrid, compute_gradients=True,
+        #                     method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot,
         #                     use_MCMC=use_MCMC,**gibbs_params)
 
-	#print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
-	#print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
-	#print 'Fraction of points within 3 sd for ne: {}'.format(res.frac_within_3sd)
+        #print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
+        #print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
+        #print 'Fraction of points within 3 sd for ne: {}'.format(res.frac_within_3sd)
 
     else:
-	res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-		             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot, grad_constr=False,
-                             use_MCMC=use_MCMC, **gibbs_params)
+        res = profile_fit_fs(ne.x, ne.y, err_y= ne.err_y, optimize=True, grid=xgrid, compute_gradients=True,
+                             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot, grad_constr=False,
+                             use_MCMC=use_MCMC, c=c, **gibbs_params)
 
     '''
     # get minor radius:
@@ -228,7 +255,7 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
         if dst!=None:
             with open(dst+'/ne_dict_fit_%d.pkl'%shot,'wb') as f:
-	        pkl.dump(ne_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
+                pkl.dump(ne_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
             print 'saved file ' +dst+'/ne_dict_fit_%d.pkl'%shot
 
     else:
@@ -247,51 +274,57 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         ne_prof.time = (t_min+t_max)/2.0
 
         if dst!=None:
-	    with open(dst+'/ne_prof_%d_FS.pkl'%shot,'wb') as f:
-	        pkl.dump(ne_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
+            with open(dst+'/ne_prof_%d_FS.pkl'%shot,'wb') as f:
+                pkl.dump(ne_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
             print 'saved file ' +dst+'/ne_prof_%d_FS.pkl'%shot
 
     if plot:
-	plt.xlabel(r'$r/a$')
-	plt.ylabel(r'$n_e [m^{-3}]$')
-	if edge_focus: plt.xlim([0.8,1.05])
+        plt.xlabel(r'$r/a$')
+        plt.ylabel(r'$n_e [m^{-3}]$')
+        if edge_focus: plt.xlim([0.8,1.05])
 
-        plt.figure()
+        plt.figure(2)
         if not save_as_dict:
-            plt.errorbar(ne_prof.x, ne_prof.dy_dx, ne_prof.err_dy_dx, fmt='*')
+            plt.errorbar(ne_prof.x, ne_prof.dy_dx, ne_prof.err_dy_dx, fmt='*', color=c)
         else:
-            plt.errorbar(ne_prof['X'], ne_prof['dy_dX'], ne_prof['err_dy_dX'], fmt='*')
+            plt.errorbar(ne_prof['X'], ne_prof['dy_dX'], ne_prof['err_dy_dX'], fmt='*', color=c)
         plt.xlabel('r/a'); plt.ylabel('dne/dx')
 
-        plt.figure()
+        plt.figure(3)
         if not save_as_dict:
-            plt.errorbar(ne_prof.x, ne_prof.a_Ly, ne_prof.err_a_Ly, fmt='*')
+            plt.errorbar(ne_prof.x, ne_prof.a_Ly, ne_prof.err_a_Ly, fmt='*', color=c)
         else:
-            plt.errorbar(ne_prof['X'], ne_prof['a_Ly'], ne_prof['err_a_Ly'], fmt='*')
+            plt.errorbar(ne_prof['X'], ne_prof['a_Ly'], ne_prof['err_a_Ly'], fmt='*', color=c)
         plt.xlabel('r/a'); plt.ylabel('a/Lne'); plt.ylim([-1,5])
 
-        plt.figure()
+        plt.figure(4)
         if not save_as_dict:
-            plt.plot(ne_prof.x,ne_prof.err_a_Ly/ne_prof.a_Ly)
+            plt.plot(ne_prof.x,ne_prof.err_a_Ly/ne_prof.a_Ly, color=c)
         else:
-            plt.plot(ne_prof['X'], ne_prof['err_a_Ly']/ne_prof['a_Ly'])
+            plt.plot(ne_prof['X'], ne_prof['err_a_Ly']/ne_prof['a_Ly'], color=c)
         plt.xlabel('r/a'); plt.ylabel('a/Lne fractional uncertainty')
         plt.ylim([0,0.8])
 
-def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, use_MCMC=use_MCMC):
+    return ne_prof
+
+def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, use_MCMC=use_MCMC, x0_mean=0.45):
     '''
-	    Get te fit either by optimizing over noise or by direct GPR fitting
+            Get te fit either by optimizing over noise or by direct GPR fitting
     '''
 
     # Get ECE data only in the core
     p_Te_ECE=profiletools.Te(shot, include=['GPC','GPC2'],abscissa='r/a',t_min=t_min,t_max=t_max)
-    p_Te_ECE.remove_points(p_Te_ECE.X[:,1]>0.8)
+    #p_Te_ECE.remove_points(p_Te_ECE.X[:,1]>0.8)
 
-    try:
-	# Add TS data (core + edge)
-	p_Te=profiletools.Te(shot, include=['CTS','ETS'],abscissa='r/a',t_min=t_min,t_max=t_max)
-	p_Te.add_profile(p_Te_ECE)
+    # Add TS data (core + edge)
+    #p_Te=profiletools.Te(shot, include=['CTS','ETS'],abscissa='r/a',t_min=t_min,t_max=t_max)
+    p_Te=profiletools.Te(shot, include=['ETS'],abscissa='r/a',t_min=t_min,t_max=t_max)
+    p_Te.add_profile(p_Te_ECE)
+    p_Te.remove_points(p_Te.y < 0.02)
+    #p_Te.remove_points(p_Te.y < p_Te.err_y)
+    print "Working"
 
+    """
     except:
         if shot==1101014030:
             # 1101014030 does not have ETS. Use the one from repeat shot 1101014029
@@ -304,21 +337,33 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
             p_Te.add_profile(p_ETS)
         else:
             raise ValueError("Problems fetching TS data!")
+    """
 
-    p_Te.time_average(weighted=True, y_method='total')
+    p_Te.time_average(weighted=True, y_method='sample')
+    print p_Te.X.shape
+    # Remove some problematic points
+    if shot%1000 == 1120216000:
+        p_Te.remove_points(np.logical_and(p_Te.X[:,0] < 0.466, p_Te.X[:,0] > 0.464))
+        p_Te.remove_points(np.logical_and(p_Te.X[:,0] < 0.96, p_Te.X[:,0] > 0.95))
 
     # clean up data
     p=copy.deepcopy(p_Te)
 
     # use convenience function
     Te,sorted_idx = prof_setup(p)
-    time = [t_min, t_max]
+    #time = [t_min, t_max]
 
-    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
-	          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+    #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
+        #          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+    gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':0.33,
+                  'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+
+    gibbs_params=gibbs_params_global
+    gibbs_params['x0_mean'] = x0_mean
+
 
     res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True,
-	     	         method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot,
+                              method='GPR',kernel='gibbs',noiseLevel=1.0,debug_plots=plot,
                          use_MCMC=False, **gibbs_params)
 
     deltas = np.abs(res.m_gp - Te.y)/ res.s_gp #Te.err_y
@@ -339,108 +384,116 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
 
     if noise_opt:
         pass
-	# Uncertainty quantification and re-fitting:
-	#opt = nlopt.opt(nlopt.LN_SBPLX, 1)  # LN_SBPLX
-	#opt.set_lower_bounds([1.0,] * opt.get_dimension())
-	#opt.set_upper_bounds([4.0,] * opt.get_dimension())
-	#opt.set_xtol_abs(0.1)
-	#objective = lambda x,grad: MSE_Gaussian_loss(x,grad, Te.x, Te.y, Te.err_y, gibbs_params, kernel='gibbs')
-	#opt.set_min_objective(objective)
+        # Uncertainty quantification and re-fitting:
+        #opt = nlopt.opt(nlopt.LN_SBPLX, 1)  # LN_SBPLX
+        #opt.set_lower_bounds([1.0,] * opt.get_dimension())
+        #opt.set_upper_bounds([4.0,] * opt.get_dimension())
+        #opt.set_xtol_abs(0.1)
+        #objective = lambda x,grad: MSE_Gaussian_loss(x,grad, Te.x, Te.y, Te.err_y, gibbs_params, kernel='gibbs')
+        #opt.set_min_objective(objective)
 
-	## Launch optimization
-	#psi = opt.optimize(np.asarray([2.0]))[0]
-	#print " *********** Optimized value of psi: ", psi, ' ****************'
+        ## Launch optimization
+        #psi = opt.optimize(np.asarray([2.0]))[0]
+        #print " *********** Optimized value of psi: ", psi, ' ****************'
 
-	## find statistics for optimized result:
-	#res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-	#     	             method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot,
+        ## find statistics for optimized result:
+        #res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True, grid=xgrid, compute_gradients=True,
+        #                          method='GPR',kernel='gibbs',noiseLevel=psi,debug_plots=plot,
         #                     use_MCMC=use_MCMC,**gibbs_params)
 
-	#print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
-	#print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
-	#print 'Fraction of points within 3 sd for ne: {}'.format(res.frac_within_3sd)
+        #print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
+        #print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
+        #print 'Fraction of points within 3 sd for ne: {}'.format(res.frac_within_3sd)
 
     else:
-	res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True,grid=xgrid, compute_gradients=True,
-	     	             method='GPR',kernel='gibbs',noiseLevel=0,debug_plots=plot,
+        res = profile_fit_fs(Te.x, Te.y, err_y= Te.err_y, optimize=True,grid=xgrid, compute_gradients=True,
+                                  method='GPR',kernel='gibbs',noiseLevel=1.0,debug_plots=plot,
                              use_MCMC=use_MCMC, **gibbs_params)
 
     # get minor radius:
     #t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
 
     if save_as_dict:
-        Te_prof={};
-        Te_prof['X']=res.grid
-        Te_prof['y'] = res.m_gp
-        Te_prof['err_y']=res.s_gp
-        Te_prof['dy_dX'] = res.gm_gp
-        Te_prof['err_dy_dX']=res.gs_gp
-        Te_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
-        #Te_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
-        Te_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #Te_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        Te_prof['time'] = (t_min+t_max)/2.0
+        te_prof={};
+        te_prof['X']=res.grid
+        te_prof['y'] = res.m_gp
+        te_prof['err_y']=res.s_gp
+        te_prof['dy_dX'] = res.gm_gp
+        te_prof['err_dy_dX']=res.gs_gp
+        te_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #te_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        te_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #te_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        te_prof['time'] = (t_min+t_max)/2.0
 
         if dst!=None:
             with open(dst+'/te_dict_fit_%d.pkl'%shot,'wb') as f:
-	        pkl.dump(Te_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
+                pkl.dump(te_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
             print 'saved file ' +dst+'/te_dict_fit_%d.pkl'%shot
 
     else:
-        Te_prof = prof_object()
+        te_prof = prof_object()
 
         # save fitted profile:
-        Te_prof.x = res.grid
-        Te_prof.y = res.m_gp
-        Te_prof.err_y = res.s_gp
-        Te_prof.dy_dx = res.gm_gp
-        Te_prof.err_dy_dx = res.gs_gp
-        Te_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
-        #Te_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
-        Te_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #Te_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        Te_prof.time = (t_min+t_max)/2.0
+        te_prof.x = res.grid
+        te_prof.y = res.m_gp
+        te_prof.err_y = res.s_gp
+        te_prof.dy_dx = res.gm_gp
+        te_prof.err_dy_dx = res.gs_gp
+        te_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #te_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        te_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #te_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        te_prof.time = (t_min+t_max)/2.0
 
         if dst!=None:
-	    with open(dst+'/te_prof_%d_FS.pkl'%shot,'wb') as f:
-	        pkl.dump(Te_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
-	    print 'saved file ' +dst+'/te_prof_%d_FS.pkl'%shot
+            with open(dst+'/te_prof_%d_FS.pkl'%shot,'wb') as f:
+                pkl.dump(te_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
+            print 'saved file ' +dst+'/te_prof_%d_FS.pkl'%shot
 
     if plot:
-	plt.xlabel(r'$r/a$')
-	plt.ylabel(r'$T_e$ [keV]')
+        plt.xlabel(r'$r/a$')
+        plt.ylabel(r'$T_e$ [keV]')
         if edge_focus: plt.xlim([0.8,1.05])
 
         plt.figure()
         if not save_as_dict:
-            plt.errorbar(Te_prof.x, Te_prof.dy_dx, Te_prof.err_dy_dx, fmt='*')
+            plt.errorbar(te_prof.x, te_prof.dy_dx, te_prof.err_dy_dx, fmt='*')
         else:
-            plt.errorbar(Te_prof['X'], Te_prof['dy_dX'], Te_prof['err_dy_dX'], fmt='*')
+            plt.errorbar(te_prof['X'], te_prof['dy_dX'], te_prof['err_dy_dX'], fmt='*')
         plt.xlabel('r/a'); plt.ylabel('dTe/dx')
 
         plt.figure()
         if not save_as_dict:
-            plt.errorbar(Te_prof.x, Te_prof.a_Ly, Te_prof.err_a_Ly, fmt='*')
+            plt.errorbar(te_prof.x, te_prof.a_Ly, te_prof.err_a_Ly, fmt='*')
         else:
-            plt.errorbar(Te_prof['X'], Te_prof['a_Ly'], Te_prof['err_a_Ly'], fmt='*')
+            plt.errorbar(te_prof['X'], te_prof['a_Ly'], te_prof['err_a_Ly'], fmt='*')
         plt.xlabel('r/a'); plt.ylabel('a/LTe'); plt.ylim([-1,20])
 
         plt.figure()
         if not save_as_dict:
-            plt.plot(Te_prof.x,Te_prof.err_a_Ly/Te_prof.a_Ly)
+            plt.plot(te_prof.x,te_prof.err_a_Ly/te_prof.a_Ly)
         else:
-            plt.plot(Te_prof['X'], Te_prof['err_a_Ly']/Te_prof['a_Ly'])
+            plt.plot(te_prof['X'], te_prof['err_a_Ly']/te_prof['a_Ly'])
         plt.xlabel('r/a'); plt.ylabel('a/LTe fractional uncertainty')
         plt.ylim([0,0.8])
+
+    return te_prof
 
 
 
 
 def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_point,
-               plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict):
+               plot=True, noise_opt=False, dst=dst, save_as_dict=save_as_dict, te_fit=None, t_inst=0.12, x0_mean=0.45):
+    global lastShot, e
     '''
     Get ti profile by merging with te fit
     '''
+    
+    if shot != lastShot:
+        e = eqtools.CModEFITTree(shot) #,tree='EFIT20')
+        lastShot= shot
+
     if shot==1101014029:
         # in this shot, Ar was burnt in the core. A merged profile of Ti was obtained by combining
         # Ar and Ca-injection data -- likely not to high accuracy
@@ -460,6 +513,7 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
         try:
             branchnode =  specTree.getNode(rootPath+'.HELIKE.PROFILES.Z')
             data = ThacoData(branchnode)
+            print 'loaded helike'
         except:
             branchnode =  specTree.getNode(rootPath+'.HLIKE.PROFILES.LYA1')
             data = ThacoData(branchnode)
@@ -467,33 +521,44 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
         ti_x = e.rho2rho('psinorm', 'r/a', data.rho, (t_min+t_max)/2.0)
 
         # time range of interest
-        tt1 = np.argmin(np.abs(data.time - t_min))
-        tt2 = np.argmin(np.abs(data.time - t_max))
+        tt1, tt2 = np.searchsorted(data.time, (t_min, t_max))
 
-        ti_y = np.mean(data.pro[3,tt1:tt2,:],axis=0)
+        ti_y = np.mean(data.pro[3,tt1:tt2,:],axis=0)-t_inst
+        
         # use LoTV for uncertainties
         ti_err_y = np.sqrt(np.var(data.pro[3,tt1:tt2,:],axis=0) + np.mean(data.perr[3, tt1:tt2,:]**2,axis=0))
+        
+        print 
+        plt.errorbar(ti_x, ti_y, ti_err_y)
 
         # eliminate obvious outliers
         ti_y[(ti_y<0) | (ti_err_y>0.8)] = np.nan
         ti_err_y[(ti_y<0) | (ti_err_y>0.8)] = np.nan
 
-    # load te
-    if shot==1120106012:  # Norman's case
-        with open('/home/sciortino/shot_1160506007/transport_profiles/te_prof_1160506007_FS.pkl', 'rb') as f:
-	    te=pkl.load(f)
+    
+    # load te if the fit isn't provided as an argument
+    if te_fit == None:
+        if save_as_dict:
+            with open(dst+'/te_dict_fit_%d.pkl'%shot, 'rb') as f:
+                te=pkl.load(f)
+        else:
+            if shot==1120106012:  # Norman's case
+                with open('/home/sciortino/shot_1160506007/transport_profiles/te_prof_1160506007_FS.pkl', 'rb') as f:
+                    te=pkl.load(f)
+            else:
+                with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
+                    te=pkl.load(f)
     else:
-        with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
-	    te=pkl.load(f)
+        te = te_fit
 
     try:
-	te_x = te.x
-	te_y = te.y
-	te_err_y = te.err_y
+        te_x = te.x
+        te_y = te.y
+        te_err_y = te.err_y
     except:
-	te_x = te['X']
-	te_y = te['y']
-	te_err_y = te['err_y']
+        te_x = te['X']
+        te_y = te['y']
+        te_err_y = te['err_y']
 
     # merging position
     edge_idx_te=np.argmin(np.abs(te_x-merge_point))
@@ -516,119 +581,128 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
     # grid to evaluate profiles on (same as for Te) --> allow GP to extend well beyond LCFS (but don't use values there!)
     xgrid = np.linspace(0,1.15, 200)
 
-    ti = prof_object(**{'x':ti_x,'y':ti_y,'err_y':ti_err_y, 'time':(t_min+t_max)/2.0})
+    ti = prof_object(**{'x':ti_x,'y':ti_y,'err_y':ti_err_y})
 
     ########
     # prior hyperparameters (making priors wider doesn't seem to matter!)
     gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
-	          'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+                  'l1_sd':0.02,'l2_sd':0.25,'lw_sd':0.1,'x0_sd':0.05}
+
+    gibbs_params=gibbs_params_global
+    gibbs_params['x0_mean'] = x0_mean
+    
+    
+
+
 
     # temporary TEST FOR NORMAN
     #gibbs_params={'sigma_min':0.0,'sigma_max':10.0,'l1_mean':0.5,'l2_mean':0.5,'lw_mean':0.01,'x0_mean':1.0,
-	#          'l1_sd':20.,'l2_sd':20.0,'lw_sd':0.1,'x0_sd':0.05}
+        #          'l1_sd':20.,'l2_sd':20.0,'lw_sd':0.1,'x0_sd':0.05}
 
     #########################
     if noise_opt:
         pass
-	# Uncertainty quantification and re-fitting:
-	#opt = nlopt.opt(nlopt.LN_SBPLX, 1)  # LN_SBPLX
-	#opt.set_lower_bounds([1.0,] * opt.get_dimension())
-	#opt.set_upper_bounds([4.0,] * opt.get_dimension())
-	#opt.set_xtol_abs(0.1)
-	#objective = lambda x,grad: MSE_Gaussian_loss(x,grad,ti.x, ti.y, ti.err_y, gibbs_params, kernel='gibbs')
-	#opt.set_min_objective(objective)
+        # Uncertainty quantification and re-fitting:
+        #opt = nlopt.opt(nlopt.LN_SBPLX, 1)  # LN_SBPLX
+        #opt.set_lower_bounds([1.0,] * opt.get_dimension())
+        #opt.set_upper_bounds([4.0,] * opt.get_dimension())
+        #opt.set_xtol_abs(0.1)
+        #objective = lambda x,grad: MSE_Gaussian_loss(x,grad,ti.x, ti.y, ti.err_y, gibbs_params, kernel='gibbs')
+        #opt.set_min_objective(objective)
 
-	## Launch optimization
-	#psi = opt.optimize(np.asarray([2.0]))[0]
-	#print " *********** Optimized value of psi: ", psi, ' ****************'
+        ## Launch optimization
+        #psi = opt.optimize(np.asarray([2.0]))[0]
+        #print " *********** Optimized value of psi: ", psi, ' ****************'
 
-	## find statistics for optimized result:
-	#res = profile_fit_fs(ti.x,ti.y, err_y=ti.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-	#	     kernel='gibbs', noiseLevel=psi,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
+        ## find statistics for optimized result:
+        #res = profile_fit_fs(ti.x,ti.y, err_y=ti.err_y, optimize=True, grid=xgrid, compute_gradients=True,
+        #             kernel='gibbs', noiseLevel=psi,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
 
-	#plt.xlabel(r'$r/a$', fontsize=16)
-	#plt.ylabel(r'$T_i [m^{-3}]$', fontsize=16)
-	#print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
-	#print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
-	#print 'Fraction of points within 3 sd for ne: {}'.format(res.frac_within_3sd)
+        #plt.xlabel(r'$r/a$', fontsize=16)
+        #plt.ylabel(r'$T_i [m^{-3}]$', fontsize=16)
+        #print 'Fraction of points within 1 sd for ne: {}'.format(res.frac_within_1sd)
+        #print 'Fraction of points within 2 sd for ne: {}'.format(res.frac_within_2sd)
+        #print 'Fraction of points within 3 sd for ne: {}'.format(res.frac_within_3sd)
 
     else:
-	# direct estimate for given noise:
-	res = profile_fit_fs(ti.x, ti.y, err_y=ti.err_y, optimize=True, grid=xgrid, compute_gradients=True,
-		             kernel='gibbs', noiseLevel=2.0,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
+        # direct estimate for given noise:
+        res = profile_fit_fs(ti.x, ti.y, err_y=ti.err_y, optimize=True, grid=xgrid, compute_gradients=True,
+                             kernel='gibbs', noiseLevel=2.0,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
 
     # get minor radius:
     #t = e.getTimeBase(); a0=np.median(e.getAOut()[(t>t_min)*(t<t_max)])
 
     if save_as_dict:
-        Ti_prof={};
-        Ti_prof['X']= res.grid
-        Ti_prof['y'] = res.m_gp
-        Ti_prof['err_y']=res.s_gp
-        Ti_prof['dy_dX'] = res.gm_gp
-        Ti_prof['err_dy_dX']=res.gs_gp
-        Ti_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
-        #Ti_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
-        Ti_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #Ti_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        Ti_prof['time'] = (t_min+t_max)/2.0
+        ti_prof={};
+        ti_prof['X']= res.grid
+        ti_prof['y'] = res.m_gp
+        ti_prof['err_y']=res.s_gp
+        ti_prof['dy_dX'] = res.gm_gp
+        ti_prof['err_dy_dX']=res.gs_gp
+        ti_prof['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #ti_prof['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        ti_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #ti_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        ti_prof['time'] = (t_min+t_max)/2.0
 
         if dst!=None:
-            with open(dst+'/te_dict_fit_%d.pkl'%shot,'wb') as f:
-	        pkl.dump(Ti_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
-            print 'saved file ' +dst+'/te_dict_fit_%d.pkl'%shot
+            with open(dst+'/ti_dict_fit_%d.pkl'%shot,'wb') as f:
+                pkl.dump(ti_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
+            print 'saved file ' +dst+'/ti_dict_fit_%d.pkl'%shot
 
     else:
-        Ti_prof = prof_object()
+        ti_prof = prof_object()
 
         # save fitted profile:
-        Ti_prof.x = res.grid
-        Ti_prof.y = res.m_gp
-        Ti_prof.err_y = res.s_gp
-        Ti_prof.dy_dx = res.gm_gp
-        Ti_prof.err_dy_dx = res.gs_gp
-        Ti_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
-        #Ti_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
-        Ti_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #Ti_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        Ti_prof.time = (t_min+t_max)/2.0
+        ti_prof.x = res.grid
+        ti_prof.y = res.m_gp
+        ti_prof.err_y = res.s_gp
+        ti_prof.dy_dx = res.gm_gp
+        ti_prof.err_dy_dx = res.gs_gp
+        ti_prof.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #ti_prof.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        ti_prof.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #ti_prof.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        ti_prof.time = (t_min+t_max)/2.0
 
         # save updated/combined Ti profile:
         if dst!=None:
-	    with open(dst+'/ti_prof_%d_FS.pkl'%shot,'wb') as f:
-	        pkl.dump(Ti_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
-	    print 'saved file ' +dst+'/ti_prof_%d_FS.pkl'%shot
+            with open(dst+'/ti_prof_%d_FS.pkl'%shot,'wb') as f:
+                pkl.dump(ti_prof, f, protocol=pkl.HIGHEST_PROTOCOL)
+            print 'saved file ' +dst+'/ti_prof_%d_FS.pkl'%shot
 
     if plot:
-	plt.figure()
-	if not save_as_dict:
-            plt.errorbar(Ti_prof.x, Ti_prof.y, Ti_prof.err_y,  fmt='x')
+        plt.figure()
+        if not save_as_dict:
+            plt.errorbar(ti_prof.x, ti_prof.y, ti_prof.err_y,  fmt='x')
         else:
-            plt.errorbar(Ti_prof['X'], Ti_prof['y'], Ti_prof['err_y'], fmt='x')
-	plt.errorbar(te_x, te_y, te_err_y, fmt='o')
+            plt.errorbar(ti_prof['X'], ti_prof['y'], ti_prof['err_y'], fmt='x')
+        plt.errorbar(te_x, te_y, te_err_y, fmt='o')
         plt.xlabel('r/a');
 
         plt.figure()
         if not save_as_dict:
-            plt.errorbar(Ti_prof.x, Ti_prof.dy_dx, Ti_prof.err_dy_dx, fmt='*')
+            plt.errorbar(ti_prof.x, ti_prof.dy_dx, ti_prof.err_dy_dx, fmt='*')
         else:
-            plt.errorbar(Ti_prof['X'], Ti_prof['dy_dX'], Ti_prof['err_dy_dX'], fmt='*')
+            plt.errorbar(ti_prof['X'], ti_prof['dy_dX'], ti_prof['err_dy_dX'], fmt='*')
         plt.xlabel('r/a'); plt.ylabel('dTi/dx')
 
         plt.figure()
         if not save_as_dict:
-            plt.errorbar(Ti_prof.x, Ti_prof.a_Ly, Ti_prof.err_a_Ly, fmt='*')
+            plt.errorbar(ti_prof.x, ti_prof.a_Ly, ti_prof.err_a_Ly, fmt='*')
         else:
-            plt.errorbar(Ti_prof['X'], Ti_prof['a_Ly'], Ti_prof['err_a_Ly'], fmt='*')
+            plt.errorbar(ti_prof['X'], ti_prof['a_Ly'], ti_prof['err_a_Ly'], fmt='*')
         plt.xlabel('r/a'); plt.ylabel('a/LTi'); plt.ylim([-1,5])
 
         plt.figure()
         if not save_as_dict:
-            plt.plot(Ti_prof.x,Ti_prof.err_a_Ly/Ti_prof.a_Ly)
+            plt.plot(ti_prof.x,ti_prof.err_a_Ly/ti_prof.a_Ly)
         else:
-            plt.plot(Ti_prof['X'], Ti_prof['err_a_Ly']/Ti_prof['a_Ly'])
+            plt.plot(ti_prof['X'], ti_prof['err_a_Ly']/ti_prof['a_Ly'])
         plt.xlabel('r/a'); plt.ylabel('a/LTi fractional uncertainty')
         plt.ylim([0,0.8])
+
+    return ti_prof
 
 
 
@@ -636,10 +710,10 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
 
 
 def overplot_te_ti(shot=shot,dst=dst):
-    with open(dst+'/ti_prof_%d_FS.pkl'%shot, 'rb') as f:
-	ti=pkl.load(f)
+    with open(dst+'/vtor_%d_FS.pkl'%shot, 'rb') as f:
+        ti=pkl.load(f)
     with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
-	te=pkl.load(f)
+        te=pkl.load(f)
 
     plt.figure()
     plt.errorbar(ti.x, ti.y, ti.err_y,  fmt='x')
@@ -648,18 +722,23 @@ def overplot_te_ti(shot=shot,dst=dst):
 
 
 
-def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst):
+def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst, x0_mean=0.45):
+    global lastShot, e
     ''' Obtain toroidal rotation frequency from saved THACO data.
     Note that this requires Norman to have already saved an omega_tor BS fit in THACO.
 
     NOT YET UPDATED TO USE PYTHON DICTIONARIES
     '''
 
+    if shot != lastShot:
+        e = eqtools.CModEFITTree(shot) #,tree='EFIT20')
+        lastShot= shot
+
     if shot==1101014029:
         # in this shot, Ar was burnt in the core. A merged profile of omega_tor was obtained by combining
         # Ar and Ca-injection data -- likely not to high accuracy
         with open('/home/sciortino/fits/omega_tor_fit_%d_bmix.pkl'%shot,'rb') as f:
-	    vtor_x, omegator_y, omegator_err_y, (t_min_fit,t_max_fit) = pkl.load(f)
+            vtor_x, omegator_y, omegator_err_y, (t_min_fit,t_max_fit) = pkl.load(f)
 
     elif shot==1101014030:
         raise ValueError("FS: this shot had burnt Ar. Better to use the fit from repeat-shot 1101014029")
@@ -682,8 +761,7 @@ def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst)
         vtor_x = e.rho2rho('psinorm', 'r/a', data.rho, (t_min+t_max)/2.0)
 
         # time range of interest
-        tt1 = np.argmin(np.abs(data.time - t_min))
-        tt2 = np.argmin(np.abs(data.time - t_max))
+        tt1, tt2 = np.searchsorted(data.time, (t_min, t_max))
 
         omegator_y = np.mean(data.pro[1,tt1:tt2,:],axis=0)
         # use LoTV for uncertainties
@@ -691,44 +769,97 @@ def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst)
 
     # Change omega_tor into vtor
     Rmaj = e.rho2rho('r/a', 'Rmid', vtor_x, (t_min+t_max)/2.0)
-    y = 2 * np.pi * omegator_y * Rmaj
-    err_y = 2 * np.pi * omegator_err_y * Rmaj
+    y = 2 * np.pi * omegator_y
+    err_y = 2 * np.pi * omegator_err_y
 
     # eliminate obvious outliers
     y[err_y>50.0] = np.nan
     err_y[ err_y>50.0] = np.nan
 
-    try:
-        res = profile_fitting(vtor_x, y, err_y, optimize=True, method='GPR', kernel='SE', noise_level=2.0)
-        y=res.m_gp
-        err_y = res.s_gp
-    except:
-        # if fit fails, then just smooth profile
-        vtor_x = vtor_x[~np.isnan(y)]
-        y = y[~np.isnan(y)]
-        err_y = err_y[~np.isnan(y)]
-        y = scipy.interpolate.UnivariateSpline(vtor_x,y, s=200.0)(vtor_x)
+    xgrid = np.linspace(0,1.15, 200)
+
+    gibbs_params=gibbs_params_global
+    gibbs_params['sigma_max'] = 100.0
+    se_params={
+            'sigma_mean':10.0, 'sigma_sd':10.0,
+            'l_mean':0.05, 'l_sd':0.05
+            }
+    gibbs_params['x0_mean'] = x0_mean
+
+    res = profile_fit_fs(vtor_x, y, err_y=err_y, optimize=True, grid=xgrid, compute_gradients=True,
+                         kernel='gibbs', noiseLevel=1.0,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
+    #res = profile_fitting(vtor_x, y, err_y, optimize=True, method='GPR', kernel='SE', noise_level=2.0)
+    print res.free_params
+    print res.free_param_names
+    y=res.m_gp
+    err_y = res.s_gp
 
 
-    vtor = prof_object(**{'x':vtor_x,'y':y,'err_y':err_y, 'time':(t_min+t_max)/2.0})
+
+    if save_as_dict:
+        vtor={};
+        vtor['X']=res.grid
+        vtor['y'] = res.m_gp
+        vtor['err_y']=res.s_gp
+        vtor['dy_dX'] = res.gm_gp
+        vtor['err_dy_dX']=res.gs_gp
+        vtor['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #vtor['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        vtor['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #vtor['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        vtor['time'] = (t_min+t_max)/2.0
+
+        if dst!=None:
+            with open(dst+'/ne_dict_fit_%d.pkl'%shot,'wb') as f:
+                pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
+            print 'saved file ' +dst+'/ne_dict_fit_%d.pkl'%shot
+
+    else:
+        vtor = prof_object()
+
+        # save fitted profile:
+        vtor.x = res.grid
+        vtor.y = res.m_gp
+        vtor.err_y = res.s_gp
+        vtor.dy_dx = res.gm_gp
+        vtor.err_dy_dx = res.gs_gp
+        vtor.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #vtor.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        vtor.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #vtor.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        vtor.time = (t_min+t_max)/2.0
+
+        if dst!=None:
+            with open(dst+'/vtor_%d_FS.pkl'%shot,'wb') as f:
+                pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
+            print 'saved file ' +dst+'/vtor_%d_FS.pkl'%shot
 
     if dst!=None:
-	with open(dst+'/vtor_prof_%d_FS.pkl'%shot,'wb') as f:
-	    pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
-	print 'saved file ' +dst+'/vtor_prof_%d_FS.pkl'%shot
+        with open(dst+'/vtor_prof_%d_FS.pkl'%shot,'wb') as f:
+            pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
+        print 'saved file ' +dst+'/vtor_prof_%d_FS.pkl'%shot
+
+
 
     if plot:
-	plt.figure()
-	plt.errorbar(vtor.x, vtor.y, yerr=vtor.err_y)
-	plt.xlabel(r'r/a', fontsize=16) #square root normalized toroidal flux')
-	plt.ylabel(r'$v_{tor}$ [km/s]', fontsize=16) #' [kHz (note: kHz not krad/s, i.e. real frequency)]')
+        plt.figure()
+        if not save_as_dict:
+            plt.errorbar(vtor.x, vtor.dy_dx, vtor.err_dy_dx, fmt='*')
+        else:
+            plt.errorbar(vtor['X'], vtor['dy_dX'], vtor['err_dy_dX'], fmt='*')
+        plt.xlabel('r/a'); plt.ylabel('dvtor/dx')
+
+
+    return vtor
+
+
 
 
 def overplot_te_ti_shifted(shot=shot,dst=dst):
-    with open(dst+'/ti_prof_%d_FS_shifted.pkl'%shot, 'rb') as f:
-	ti=pkl.load(f)
+    with open(dst+'/vtor_%d_FS_shifted.pkl'%shot, 'rb') as f:
+        ti=pkl.load(f)
     with open(dst+'/te_prof_%d_FS_shifted.pkl'%shot, 'rb') as f:
-	te=pkl.load(f)
+        te=pkl.load(f)
 
     plt.figure()
     plt.errorbar(ti.x, ti.y, ti.err_y,  fmt='x')
@@ -747,37 +878,37 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
     if save_as_dict:
         # assume data was also saved as Python dictionaries
         with open(dst+'/te_dict_fit_%d.pkl'%shot, 'rb') as f:
-	    te=pkl.load(f)
+            te=pkl.load(f)
         with open(dst+'/ne_dict_fit_%d.pkl'%shot, 'rb') as f:
-	    ne=pkl.load(f)
+            ne=pkl.load(f)
 
         if shift_hirexdata_as_well:
             with open(dst+'/ti_dict_fit_%d.pkl'%shot, 'rb') as f:
                 ti=pkl.load(f)
-	    with open(dst+'/vtor_dict_fit_%d.pkl'%shot, 'rb') as f:
-	        vtor=pkl.load(f)
+            with open(dst+'/vtor_dict_fit_%d.pkl'%shot, 'rb') as f:
+                vtor=pkl.load(f)
     else:
         with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
-	    te=pkl.load(f)
-        with open(dst+'/ne_prof_%d_FS.pkl'%shot, 'rb') as f:
-	    ne=pkl.load(f)
+            te=pkl.load(f)
+        with open(dst+'/vtor_%d_FS.pkl'%shot, 'rb') as f:
+            ne=pkl.load(f)
 
         if shift_hirexdata_as_well:
-            with open(dst+'/ti_prof_%d_FS.pkl'%shot, 'rb') as f:
+            with open(dst+'/vtor_%d_FS.pkl'%shot, 'rb') as f:
                 ti=pkl.load(f)
-	    with open(dst+'/vtor_prof_%d_FS.pkl'%shot, 'rb') as f:
-	        vtor=pkl.load(f)
+            with open(dst+'/vtor_prof_%d_FS.pkl'%shot, 'rb') as f:
+                vtor=pkl.load(f)
 
     try:   #or if not save_as_dict
-	te_x = te.x; ne_x = ne.x;
+        te_x = te.x; ne_x = ne.x;
         if shift_hirexdata_as_well: ti_x = ti.x; vtor_x = vtor.x
-	te_y = te.y; ne_y = ne.y;
+        te_y = te.y; ne_y = ne.y;
         if shift_hirexdata_as_well: ti_y = ti.y; vtor_y = vtor.y
-	te_err_y = te.err_y; ne_err_y = ne.err_y;
+        te_err_y = te.err_y; ne_err_y = ne.err_y;
         if shift_hirexdata_as_well: ti_err_y = ti.err_y; vtor_err_y = vtor.err_y
     except:
         # use dictionaries
-	te_x = te['X']; ne_x = ne['X'];
+        te_x = te['X']; ne_x = ne['X'];
         if shift_hirexdata_as_well: ti_x = ti['X']; vtor_x = vtor['X']
 
         '''# if using new dictionary form, shift all fields (includes gradients)
@@ -785,7 +916,7 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
             if key!='X' and key!='time':
                 eval('te_'+key+'= te['+key+']')
         '''
-	te_y = te['y']; ne_y = ne['y'];
+        te_y = te['y']; ne_y = ne['y'];
         if shift_hirexdata_as_well: ti_y = ti['y']; vtor_y = vtor['y']
         te_err_y = te['err_y']; ne_err_y = ne['err_y'];
         if shift_hirexdata_as_well: ti_err_y = ti['err_y']; vtor_err_y = vtor['err_y']
@@ -812,14 +943,14 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
 
     if shift_hirexdata_as_well:
         ti_x = ti_x - shift
-	ti_y = ti_y[ti_x>0]
-	ti_err_y = ti_err_y[ti_x>0]
-	ti_x = ti_x[ti_x>0]  # redefinition
+        ti_y = ti_y[ti_x>0]
+        ti_err_y = ti_err_y[ti_x>0]
+        ti_x = ti_x[ti_x>0]  # redefinition
 
-	vtor_x = vtor_x - shift
-	vtor_y = vtor_y[vtor_x>0]
-	vtor_err_y = vtor_err_y[vtor_x>0]
-	vtor_x = vtor_x[vtor_x>0]  # redefinition
+        vtor_x = vtor_x - shift
+        vtor_y = vtor_y[vtor_x>0]
+        vtor_err_y = vtor_err_y[vtor_x>0]
+        vtor_x = vtor_x[vtor_x>0]  # redefinition
 
     # Ensure that first radial point is 0 (accuracy not significantly reduced, but interpolation may also be done...)
     te_x[0] = 0.0; ne_x[0] = 0.0;
@@ -829,26 +960,26 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
         te_prof={}
         te_prof['X']=te_x; te_prof['y'] = te_y; te_prof['err_y'] = te_err_y; te_prof['time'] = te['time']
 
-        ne_prof={}
-        ne_prof['X']=ne_x; ne_prof['y'] = ne_y; ne_prof['err_y'] = ne_err_y; ne_prof['time'] = ne['time']
+        vtor={}
+        vtor['X']=ne_x; vtor['y'] = ne_y; vtor['err_y'] = ne_err_y; vtor['time'] = ne['time']
 
         # save dictionaries
         with open(dst+'/te_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-	    pkl.dump(te_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
+            pkl.dump(te_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
         with open(dst+'/ne_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-	    pkl.dump(ne_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
+            pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
 
         if shift_hirexdata_as_well:
-            ti_prof={}
-            ti_prof['X']=ti_x; ti_prof['y'] = ti_y; ti_prof['err_y'] = ti_err_y; ti_prof['time'] = ti['time']
+            vtor={}
+            vtor['X']=ti_x; vtor['y'] = ti_y; vtor['err_y'] = ti_err_y; vtor['time'] = ti['time']
 
             vtor_prof={}
             vtor_prof['X']=vtor_x; vtor_prof['y'] = vtor_y; vtor_prof['err_y'] = vtor_err_y; vtor_prof['time'] = vtor['time']
 
             with open(dst+'/ti_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-	        pkl.dump(ti_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
+                pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
             with open(dst+'/vtor_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-	        pkl.dump(vtor_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
+                pkl.dump(vtor_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
 
 
     else:
@@ -858,7 +989,7 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
 
         if shift_hirexdata_as_well:
             ti = prof_object(**{'x':ti_x,'y':ti_y,'err_y':ti_err_y, 'time': ti.time})
-	    vtor = prof_object(**{'x':vtor_x,'y':vtor_y,'err_y':vtor_err_y, 'time': vtor.time})
+            vtor = prof_object(**{'x':vtor_x,'y':vtor_y,'err_y':vtor_err_y, 'time': vtor.time})
 
 
         # plotting currently only for non-dict case...
@@ -874,20 +1005,20 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
         plt.xlabel('r/a', fontsize=18); plt.ylabel(r'$n_e$ $[\times 10^{20} m^{-3}]$', fontsize=18)
 
         with open(dst+'/te_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
-	    pkl.dump(te,f,protocol=pkl.HIGHEST_PROTOCOL)
-        with open(dst+'/ne_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
-	    pkl.dump(ne,f,protocol=pkl.HIGHEST_PROTOCOL)
+            pkl.dump(te,f,protocol=pkl.HIGHEST_PROTOCOL)
+        with open(dst+'/vtor_%d_FS_shifted.pkl'%shot, 'wb') as f:
+            pkl.dump(ne,f,protocol=pkl.HIGHEST_PROTOCOL)
 
         if shift_hirexdata_as_well:
             plt.figure()
-	    plt.errorbar(vtor.x,vtor.y, vtor.err_y, fmt='o-', color ='purple')
-	    plt.xlabel('r/a', fontsize=18); plt.ylabel(r'$v_{tor}$ [m/s]', fontsize=18)
+            plt.errorbar(vtor.x,vtor.y, vtor.err_y, fmt='o-', color ='purple')
+            plt.xlabel('r/a', fontsize=18); plt.ylabel(r'$v_{tor}$ [m/s]', fontsize=18)
 
-	    with open(dst+'/ti_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
-	        pkl.dump(ti,f,protocol=pkl.HIGHEST_PROTOCOL)
+            with open(dst+'/vtor_%d_FS_shifted.pkl'%shot, 'wb') as f:
+                pkl.dump(ti,f,protocol=pkl.HIGHEST_PROTOCOL)
 
-	    with open(dst+'/vtor_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
-	        pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
+            with open(dst+'/vtor_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
+                pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
 
         print "Shifted profiles and saved them in " + dst
 

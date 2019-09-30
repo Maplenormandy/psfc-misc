@@ -76,17 +76,17 @@ c3 = getPhiWrapped(si[t3:t4], sq[t3:t4], ci, cq)
 
 
 
-f, t, Sxx = signal.spectrogram(hsz, fs=2e6, nperseg=8192, return_onesided=False)
+f, t, Sxx = signal.spectrogram(z, fs=2e6, nperseg=8192, return_onesided=False)
 
 f2 = np.fft.fftshift(f, axes=0)
 Sxx2 = np.fft.fftshift(Sxx, axes=0)
 
 plt.figure()
-plt.pcolormesh(t+0.5, f2/1000, Sxx2, cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=10**-5, vmax=10**-10))
+plt.pcolormesh(t+0.5, f2/1000, Sxx2, cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-10, vmax=1e-5))
 plt.colorbar()
 plt.xlabel('time [sec]')
 plt.ylabel('freq [kHz]')
-
+\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS
 """
 H, xedges, yedges = np.histogram2d(hsi, hsq, bins=128)
 H = H.T

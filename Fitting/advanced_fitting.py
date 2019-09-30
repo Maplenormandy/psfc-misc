@@ -25,7 +25,7 @@ class hyperparams:
             #print "Set hparams.%s = %d" %(key, value)
 
 
-def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients=False, debug_plots=True, noiseLevel=2., grad_constr=False,low_Te_edge=False, use_MCMC=False, **kwargs):
+def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients=False, debug_plots=True, kernel='gibbs', noiseLevel=2., grad_constr=False,low_Te_edge=False, use_MCMC=False, c='b', **kwargs):
     """ Advanced profile fitting for ne, Te and Ti profiles in Alcator C-Mod, based on constrained
     Gaussian Process Regression methods.
 
@@ -59,40 +59,65 @@ def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients
     res= type('', (), {})()
 
     hparams = hyperparams(**kwargs);
-    # Defaults:
-    if not hasattr(hparams,'sigma_min'): hparams.sigma_min = 0.0
-    if not hasattr(hparams,'sigma_max'): hparams.sigma_max = 10.0
-
-    if not hasattr(hparams,'l1_mean'): hparams.l1_mean = 0.3
-    if not hasattr(hparams,'l1_sd'): hparams.l1_sd = 0.3
-
-    if not hasattr(hparams,'l2_mean'): hparams.l2_mean = 0.5
-    if not hasattr(hparams,'l2_sd'): hparams.l2_sd = 0.25
-
-    if not hasattr(hparams,'lw_mean'): hparams.lw_mean = 0.0
-    if not hasattr(hparams,'lw_sd'): hparams.lw_sd = 0.3
-
-    if not hasattr(hparams,'x0_mean'): hparams.x0_mean = 0.0
-    if not hasattr(hparams,'x0_sd'): hparams.x0_sd = 0.3
-
-    hprior=(
-        gptools.UniformJointPrior([(hparams.sigma_min,hparams.sigma_max),])*
-        gptools.GammaJointPriorAlt([hparams.l1_mean,hparams.l2_mean,hparams.lw_mean,hparams.x0_mean],
-                                   [hparams.l1_sd,hparams.l2_sd,hparams.lw_sd,hparams.x0_sd])
+    
+    if kernel=='SE':
+        #assert len(kwargs) == 4
+        hparams = hyperparams(**kwargs); #hparams.set_kwargs(**kwargs)
+        # Defaults:
+        if not hasattr(hparams,'sigma_mean'): hparams.sigma_mean = 2.0
+        if not hasattr(hparams,'l_mean'): hparams.l_mean = 0.005
+        if not hasattr(hparams,'sigma_sd'): hparams.sigma_sd = 10.0
+        if not hasattr(hparams,'l_sd'): hparams.l_sd = 0.1
+    
+        hprior = (
+        gptools.GammaJointPriorAlt([hparams.sigma_mean, hparams.l_mean], [hparams.sigma_sd,hparams.l_sd])
         )
-
-    k = gptools.GibbsKernel1dTanh(
-        #= ====== =======================================================================
-        #0 sigma  Amplitude of the covariance function
-        #1 l1     Small-X saturation value of the length scale.
-        #2 l2     Large-X saturation value of the length scale.
-        #3 lw     Length scale of the transition between the two length scales.
-        #4 x0     Location of the center of the transition between the two length scales.
-        #= ====== =======================================================================
-        initial_params=[2.0, 0.5, 0.05, 0.1, 0.5], # for random_starts!= 0, the initial state of the hyperparameters is not actually used.,
-        fixed_params=[False]*5,
-        hyperprior=hprior,
+        k = gptools.SquaredExponentialKernel(
+            #= ====== =======================================================================
+            #0 sigma  Amplitude of the covariance function
+            #1 l1     Small-X saturation value of the length scale.
+            #2 l2     Large-X saturation value of the length scale.
+            #= ====== =======================================================================
+            # param_bounds=[(0, sigma_max), (0, 2.0)],
+            hyperprior=hprior,
+            initial_params=[10000.0, 400000.0], # random, doesn't matter because we do random starts anyway
+            fixed_params=[False]*2
         )
+    elif kernel=='gibbs':
+        # Defaults:
+        if not hasattr(hparams,'sigma_min'): hparams.sigma_min = 0.0
+        if not hasattr(hparams,'sigma_max'): hparams.sigma_max = 10.0
+    
+        if not hasattr(hparams,'l1_mean'): hparams.l1_mean = 0.3
+        if not hasattr(hparams,'l1_sd'): hparams.l1_sd = 0.3
+    
+        if not hasattr(hparams,'l2_mean'): hparams.l2_mean = 0.5
+        if not hasattr(hparams,'l2_sd'): hparams.l2_sd = 0.25
+    
+        if not hasattr(hparams,'lw_mean'): hparams.lw_mean = 0.0
+        if not hasattr(hparams,'lw_sd'): hparams.lw_sd = 0.3
+    
+        if not hasattr(hparams,'x0_mean'): hparams.x0_mean = 0.0
+        if not hasattr(hparams,'x0_sd'): hparams.x0_sd = 0.3
+    
+        hprior=(
+            gptools.UniformJointPrior([(hparams.sigma_min,hparams.sigma_max),])*
+            gptools.GammaJointPriorAlt([hparams.l1_mean,hparams.l2_mean,hparams.lw_mean,hparams.x0_mean],
+                                       [hparams.l1_sd,hparams.l2_sd,hparams.lw_sd,hparams.x0_sd])
+            )
+    
+        k = gptools.GibbsKernel1dTanh(
+            #= ====== =======================================================================
+            #0 sigma  Amplitude of the covariance function
+            #1 l1     Small-X saturation value of the length scale.
+            #2 l2     Large-X saturation value of the length scale.
+            #3 lw     Length scale of the transition between the two length scales.
+            #4 x0     Location of the center of the transition between the two length scales.
+            #= ====== =======================================================================
+            initial_params=[2.0, 0.5, 0.05, 0.1, 0.5], # for random_starts!= 0, the initial state of the hyperparameters is not actually used.,
+            fixed_params=[False]*5,
+            hyperprior=hprior,
+            )
 
     # Create additional noise to optimize over (the first argument is n_dims)
     nk = gptools.DiagonalNoiseKernel(1, n=0, initial_noise=np.mean(err_y)*noiseLevel,
@@ -106,10 +131,10 @@ def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients
     gp.add_data(0, 0, n=1, err_y=0.0)
 
     # Add non-hard constraint for 0 gradient at the edge
-    # gp.add_data(1.05, 0, n=1, err_y=0.05)
+    #gp.add_data(1.2, 0, n=1, err_y=0.05)
 
     # Add non-hard constraint for gradient in the far edge
-    gp.add_data(1.10, 0, n=1, err_y=0.05)
+    #gp.add_data(1.2, 0, n=0, err_y=0.05)
 
     if low_Te_edge:
         # Add non-hard constraint for 0 eV value at the edge
@@ -126,7 +151,7 @@ def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="invalid value encountered in subtract")
         if optimize:
-            res_min, ll_trials = gp.optimize_hyperparameters(verbose=False, random_starts=multiprocessing.cpu_count())
+            res_min, ll_trials = gp.optimize_hyperparameters(verbose=False, random_starts=multiprocessing.cpu_count(), num_proc=0)
         else:
             print 'Optimization is turned off. Using initial guesses for hyperparameters!'
 
@@ -148,6 +173,7 @@ def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients
     res.free_params = gp.free_params[:]
     res.free_param_names = gp.free_param_names[:]
     res.free_param_bounds = gp.free_param_bounds[:]
+    print res.free_params
 
     ###
     sum2_diff = 0
@@ -180,11 +206,11 @@ def profile_fit_fs(x, y, err_y=None, optimize=True, grid=None, compute_gradients
     res.frac_within_3sd=float(points_in_3sd)/ len(y)
 
     if debug_plots:
-        f = plt.figure()
+        f = plt.figure(1)
         a = f.add_subplot(1, 1, 1)
-        a.errorbar(x, y, yerr=err_y, fmt='.', color='b')
-        a.plot(grid, m_gp[:len(grid)], color='g')
-        gptools.univariate_envelope_plot(grid, m_gp[:len(grid)], s_gp[:len(grid)], ax=a,label='Inferred', envelopes=[1,3])
+        a.errorbar(x, y, yerr=err_y, fmt='.', color=c)
+        a.plot(grid, m_gp[:len(grid)], color=c)
+        gptools.univariate_envelope_plot(grid, m_gp[:len(grid)], s_gp[:len(grid)], ax=a,label='Inferred', envelopes=[1,3], color=c)
 
         plt.xlabel('r/a', fontsize=14)
         plt.ylabel('', fontsize=14)
