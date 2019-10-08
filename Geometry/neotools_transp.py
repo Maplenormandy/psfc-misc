@@ -438,12 +438,12 @@ class EquilibriumGeometry:
 
 import cPickle as pkl
 
-shot=1120216017
+shot=1120216030
 result = pkl.load(open('/home/normandy/git/psfc-misc/Fitting/result_%d.pkl'%shot, 'r'))
 
 zeffs = np.zeros(len(result['time']))
 
-i = 7
+i = 14
 eg = EquilibriumGeometry(shot, (result['time'][i]-0.03, result['time'][i]+0.03))
 ne_fit = result['ne_fits'][i]
 te_fit = result['te_fits'][i]
@@ -467,7 +467,7 @@ volts = data.variables['V'].data[tind,:]
 
 roa = roa[tind,:]
 
-eta_snc = data.variables['ETA_SNC'].data[tind,:]
+eta_snc = data.variables['ETA_WNC'].data[tind,:]
 eta_sps = data.variables['ETA_SPS'].data[tind,:]
 ft = data.variables['NCFT'].data[tind,:]
 ftl = data.variables['NCFTMINUS'].data[tind,:]
@@ -518,9 +518,19 @@ plt.gca().set_yticklabels(['{:.0f}%'.format(x*100) for x in plt.gca().get_yticks
 
 plt.legend(loc='upper left')
 plt.xlabel('r/a')
-plt.ylabel('Deviation from TRANSP result')
+plt.ylabel('Deviation from TRANSP NCLASS Conductivity')
 # %%
 
 plt.figure()
-plt.plot(roa, ne, c='b')
-plt.plot(ne_fit['X'], ne_fit['y']*1e14, c='g')
+mean_grad = np.mean(np.array([result['vtor_fits'][j]['dy_dX'] for j in range(12,15)]), axis=0)
+for i in range(12,15):
+    if result['vtor_fits'][i]['y'][1] < 0:
+        plt.plot(result['vtor_fits'][i]['X'], result['vtor_fits'][i]['dy_dX'], c='g')
+        #plt.axhline(np.max(mean_grad), c='k')
+        #plt.axhline(np.max(mean_grad)/2, c='k')
+        plt.plot(result['vtor_fits'][i]['X'], result['vtor_fits'][i]['y'], c='b')
+    else:
+        plt.plot(result['vtor_fits'][i]['X'], result['vtor_fits'][i]['dy_dX'], c='y')
+        #plt.axhline(np.max(mean_grad), c='k')
+        #plt.axhline(np.max(mean_grad)/2, c='k')
+        plt.plot(result['vtor_fits'][i]['X'], result['vtor_fits'][i]['y'], c='r')
