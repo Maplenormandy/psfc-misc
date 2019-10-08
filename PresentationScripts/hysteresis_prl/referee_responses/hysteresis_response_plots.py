@@ -8,17 +8,16 @@ Created on Wed Jun 19 14:44:53 2019
 import matplotlib.pyplot as plt
 import numpy as np
 
-import sys
-sys.path.append('/home/sciortino/ML/machinelearnt')
-sys.path.append('/home/sciortino/ML')
-sys.path.append('/home/sciortino/shot_analysis_tools')
+#import sys
+#sys.path.append('/home/sciortino/ML/machinelearnt')
+#sys.path.append('/home/sciortino/ML')
+#sys.path.append('/home/sciortino/shot_analysis_tools')
 
-import cPickle as pkl
+#import cPickle as pkl
 
-from transport_classes import prof_object
-from advanced_fitting import profile_fit_fs
+#from transport_classes import prof_object
+#from advanced_fitting import profile_fit_fs
 
-"""
 # %%
 
 shot=1160506007
@@ -32,23 +31,25 @@ chans = range(data_soc['meas_avg'].shape[1])
 #data_soc['meas_avg'][0,8] = np.nan
 #data_loc['meas_avg'][0,8] = np.nan
 
-bsoc = data_soc['meas_avg'][0,:]
-bloc = data_loc['meas_avg'][0,:]
+bsoc = data_soc['meas_avg'][2,:]
+bloc = data_loc['meas_avg'][2,:]
 bsoc[8] = np.nan
 bloc[8] = np.nan
 
-ns = np.nansum(bsoc)
-nl = np.nansum(bloc)
+ns = 1.0
+nl = 1.0
+
+#ns = np.nansum(bsoc)
+#nl = np.nansum(bloc)
 
 plt.figure()
-plt.errorbar(chans, bsoc/ns, yerr=data_soc['meas_std'][0,:]/ns, c='b', label='SOC, t=0.6s')
-plt.errorbar(chans, bloc/nl, yerr=data_loc['meas_std'][0,:]/nl, c='r', label='LOC, t=0.96s')
+plt.errorbar(chans, bsoc/ns, yerr=data_soc['meas_std'][2,:]/ns, c='b', label='SOC, t=0.6s')
+plt.errorbar(chans, bloc/nl, yerr=data_loc['meas_std'][2,:]/nl, c='r', label='LOC, t=0.96s')
 plt.xlabel('Spatial Channel #')
 plt.ylabel('Normalized Line-Integrated Emissivity')
 plt.legend(loc='upper left')
-"""
 
 # %%
 
-with open('/home/normandy/git/psfc-misc/Fitting/mcmc/averaging/ne_prof_1160506007_FS.pkl') as f:
-    ne_fit = pkl.load(f)
+#with open('/home/normandy/git/psfc-misc/Fitting/mcmc/averaging/ne_prof_1160506007_FS.pkl') as f:
+#    ne_fit = pkl.load(f)
