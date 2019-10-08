@@ -15,7 +15,7 @@ import scipy.io, scipy.signal
 
 font = {'family' : 'serif',
         'serif': ['Computer Modern'],
-        'size'   : 9}
+        'size'   : 12}
 
 mpl.rc('font', **font)
 
@@ -28,25 +28,29 @@ nl04data = fig1_1['nl04data']
 vtime = fig1_1['vtime']
 vdata = fig1_1['vdata']
 
-fig1 = plt.figure(1, figsize=(3.375, 3.375*1.1))
+fig1 = plt.figure(1, figsize=(3.375*1.5, 3.375*1.1*1.5))
 gs1 = mpl.gridspec.GridSpec(2, 1, height_ratios=[2,1])
 gs1_inner = mpl.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs1[0], hspace=0.0)
 
 ax10 = plt.subplot(gs1_inner[0])
-ax10.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
-ax10.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
+#ax10.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
+#ax10.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
 ax10.plot(nl04time, nl04data/1e20/0.6, c='k')
 ax10.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
 ax10.set_ylabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
 ax10.set_ylim([0.68,1.02])
 plt.setp(ax10.get_xticklabels(), visible=False)
 
+
 offset = ((7.0)-4.0)/(25.0-7.0)*6
 
 ax11 = plt.subplot(gs1_inner[1], sharex=ax10)
-ax11.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
-ax11.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
-ax11.plot(vtime, vdata+offset, c='k', marker='.')
+#ax11.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
+#ax11.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
+#ax11.plot(vtime, vdata+offset, c='k', marker='.')
+ax11.plot(vtime[:72], fig2d['hys01'][1,:], c='k', marker='.')
+ax11.plot(vtime[:72], fig2d['hys02'][1,:], c='m', marker='.')
+ax11.plot(vtime[:72], fig2d['hys03'][1,:], c='c', marker='.')
 ax11.axhline(c='k', ls='--')
 ax11.yaxis.set_major_locator(mpl.ticker.FixedLocator([-10,0,10]))
 ax11.set_ylabel('$v_{tor}$ (km/s)')
@@ -58,12 +62,14 @@ ax11.text(0.99, 0.96, '1160506007', transform=ax11.transAxes, horizontalalignmen
 fig12 = np.load('figure1_2.npz')
 
 ax12 = plt.subplot(gs1[1])
-ax12.axvspan(0.56, 0.59, color=(0.7, 1.0, 1.0))
+
+mpl.rcParams["errorbar.capsize"] = 1.0/0.8
+ax12.axvspan(0.56, 0.59, color=(1.0, 0.5, 0.3))
 ax12.errorbar(fig12['soc_roa'], fig12['soc_pro'], fig12['soc_perr'], c='b')
 ax12.errorbar(fig12['loc_roa'], fig12['loc_pro'], fig12['loc_perr'], c='r')
 ax12.axhline(c='k', ls='--')
 ax12.xaxis.set_major_locator(mpl.ticker.MultipleLocator(0.2))
-ax12.yaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
+#ax12.yaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
 ax12.set_ylabel('$f_{tor}$ (kHz)')
 ax12.set_xlabel('r/a')
 
@@ -74,11 +80,13 @@ ax12.text(0.99, 0.01, '1120106016', transform=ax12.transAxes, horizontalalignmen
 plt.tight_layout()
 plt.tight_layout()
 
+
+
 #plt.savefig('figure1.eps', format='eps', dpi=1200)
 
 # %% Figure 2: Hysteresis plot
 
-fig2 = plt.figure(2, figsize=(3.375, 3.375*0.75))
+fig2 = plt.figure(2, figsize=(3.375*1.5, 3.375*1.5*0.75))
 
 fig2d = np.load('figure2.npz')
 
@@ -112,7 +120,7 @@ plt.tight_layout()
 # %% Figure 3: Profile matched plots
 
 
-fig3 = plt.figure(3, figsize=(3.375*2,3.375*0.75))
+fig3 = plt.figure(3, figsize=(3.375*2*1.5,3.375*0.75*1.5))
 gs3o = mpl.gridspec.GridSpec(1, 2, width_ratios=[3,1])
 gs3 = mpl.gridspec.GridSpecFromSubplotSpec(2, 3, subplot_spec=gs3o[0], hspace=0.0)
 gs3i = mpl.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs3o[1], hspace=0.0)
@@ -143,6 +151,7 @@ max_ind = np.searchsorted(fig3_fs['loc_ne_x'], 1.0)
 
 r3 = fig3_profs[0,:]
 
+"""
 ax300.axvspan(0.35, 0.4, color=(1.0, 0.75, 0.5))
 ax301.axvspan(0.35, 0.4, color=(1.0, 0.75, 0.5))
 ax310.axvspan(0.35, 0.4, color=(1.0, 0.75, 0.5))
@@ -156,6 +165,7 @@ ax310.axvline(0.575, color=(0.7, 1.0, 1.0), ls='--')
 ax311.axvline(0.575, color=(0.7, 1.0, 1.0), ls='--')
 ax302.axvline(0.575, color=(0.7, 1.0, 1.0), ls='--')
 ax312.axvline(0.575, color=(0.7, 1.0, 1.0), ls='--')
+"""
 
 ax300.errorbar(fig3_nedata_loc[0,:], fig3_nedata_loc[1,:], yerr=fig3_nedata_loc[2,:], c='r', fmt='.')
 ax300.errorbar(fig3_nedata_soc[0,:], fig3_nedata_soc[1,:], yerr=fig3_nedata_soc[2,:], c='b', fmt='.')
@@ -226,9 +236,12 @@ ax311.text(0.99, 0.01, '0.96s', transform=ax311.transAxes, horizontalalignment='
 ax312.text(0.99, 0.11, '1120106012', transform=ax312.transAxes, horizontalalignment='right', verticalalignment='bottom', fontdict={'size': 6}, color='b')
 ax312.text(0.99, 0.01, '1120106016', transform=ax312.transAxes, horizontalalignment='right', verticalalignment='bottom', fontdict={'size': 6}, color='r')
 
+# %%
+fig3a = plt.figure(3, figsize=(3.375*1.5,3.375*0.9*1.5))
+gs3a = mpl.gridspec.GridSpec(2, 1,hspace=0.0)
 
-ax51 = ax303
-ax52 = ax313
+ax51 = plt.subplot(gs3a[0])
+ax52 = plt.subplot(gs3a[1], sharex=ax51)
 
 cgyro_freqs = np.load('./cgyro_outputs/all_freqs.npz')
 
@@ -244,7 +257,7 @@ for foldb in reversed(cgyro_freqs['folders']):
     omega = data[1,:]
     gamma = data[2,:]
 
-    c = (0.7, 0.7, 0.7)
+    c = (0.5, 0.5, 0.5)
     alpha = 1.0
     if fold == 'soc_mid':
         c = 'b'
@@ -264,28 +277,30 @@ for foldb in reversed(cgyro_freqs['folders']):
 
 ax51.axhline(ls='--', c='k')
 
-ax51.text(0.15, 0.38, 'r/a = 0.575')
+#ax51.text(0.15, 0.38, 'r/a = 0.575')
 
 ax52.axhline(ls='--', c='k')
 
 ax51.set_ylim([-0.59, 0.59])
-ax52.set_ylim([-0.08, 0.22])
+ax52.set_ylim([-0.05, 0.22])
 
 ax52.set_xlim([0.1, 1.42])
 
 
-ax51.set_ylabel(r'$\omega_R$ ($c_s/a$)')
+#ax51.set_ylabel(r'$\omega_R$ ($c_s/a$)')
 plt.setp(ax51.get_xticklabels(), visible=False)
 
-ax52.set_ylabel(r'$\gamma$ ($c_s/a$)')
+#ax52.set_ylabel(r'$\gamma$ ($c_s/a$)')
 #ax52.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
 #ax52.yaxis.set_minor_locator(mpl.ticker.MultipleLocator(0.05))
+ax51.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.2))
+ax52.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.05))
 ax52.set_xlabel(r'$k_y \rho_s$')
 
 plt.tight_layout(h_pad=0.0, w_pad=0.08)
 plt.tight_layout(h_pad=0.0, w_pad=0.08)
 
-plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 4: Reflecometer plots
 
@@ -318,7 +333,7 @@ plt.tight_layout()
 
 # %% Figure 4: QL weights - need to go on engaging, also what to do with flux data?
 
-fig6 = plt.figure(6, figsize=(3.375,3.375*0.75))
+fig6 = plt.figure(6, figsize=(3.375*1.5*1.2,3.375*0.75*1.5))
 gs6 = mpl.gridspec.GridSpec(1, 2, width_ratios=[4,1])
 
 ax60 = plt.subplot(gs6[0])
@@ -360,9 +375,10 @@ ax60.axvline(0.465, 0, 0.85, ls=':', c=(0.7, 0.7, 0.7))
 ax60.axvline(1.15, 0, 0.95, c=(0.7, 0.7, 0.7))
 ax60.axvline(1.65, 0, 0.95, c=(0.7, 0.7, 0.7))
 
-ax60.plot(ky, qiflux[rad_ind,:], marker='.', label='$W {Q_i}$', c='b')
-ax60.plot(ky, qeflux[rad_ind,:], marker='.', label='$W {Q_e}$', c='g')
-ax60.plot(ky, pflux[rad_ind,:], marker='.', label='$W {\Gamma_e}$', c='r')
+ax60.plot(ky, qiflux[rad_ind,:], marker='.', label='$W[{Q_i}]$', c='b')
+ax60.plot(ky, qeflux[rad_ind,:], marker='.', label='$W[{Q_e}]$', c='g')
+ax60.plot(ky, pflux[rad_ind,:], marker='.', label='$W[{\Gamma_e}]$', c='r')
+ax60.legend()
 #plt.errorbar(ky, momflux[rad_ind,:], yerr=momflux_std[rad_ind,:], marker='.', label='W,Pi')
 
 ax60.set_xscale('log')
@@ -385,19 +401,20 @@ ax61.xaxis.set_ticks_position('bottom')
 plt.tight_layout(w_pad=0.2)
 plt.tight_layout(w_pad=0.2)
 
-ax60.text(0.16, 3.1, 'Ion-Scale')
-ax60.text(1.8, 3.1, 'Elec.-Scale')
-ax60.text(0.2, 2.5, 'Ia')
-ax60.text(0.6, 2.5, 'Ib')
-ax60.text(1.25, 2.5, 'II')
-ax60.text(6.0, 2.5, 'III')
+
+#ax60.text(0.16, 3.1, 'Ion-Scale')
+#ax60.text(1.8, 3.1, 'Elec.-Scale')
+#ax60.text(0.2, 2.5, 'Ia')
+#ax60.text(0.6, 2.5, 'Ib')
+#ax60.text(1.25, 2.5, 'II')
+#ax60.text(6.0, 2.5, 'III')
 
 #plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
 
 
 # %% Figure 5, the cartoon
 
-fig7 = plt.figure(5, figsize=(3.375, 3.375*0.8))
+fig7 = plt.figure(5, figsize=(3.375*1.5, 3.375*1.5))
 
 
 gs7 = mpl.gridspec.GridSpec(2, 1, height_ratios=[3,4])
@@ -432,13 +449,14 @@ ax70.plot(kplot, soc_spectrum, c='b')
 ax70.set_ylim(bottom=0)
 
 xbar = np.arange(4)
-barlabels=['Ia', 'Ib', 'II', 'III']
+barlabels=['ITGa', 'ITGb', 'TEM', 'ETG']
 soc_values = [0.3, 1.8, 0.0, 0.33]
 loc_values = [0.6, 1.4, 0.2, 0.3]
 
 ax70.set_xlabel(r'$k_y \rho_s$')
 ax70.set_ylabel(r'$W_{Qi,k} \left\langle \bar{\phi}_{k_1}^2 \right\rangle$ (arb. units)')
-ax70.set_title('Example Ion Heat Flux Spectrum')
+ax70.set_title('Cartoon Ion Heat Flux Spectrum')
+ax70.xaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5))
 
 ax710.bar(xbar, loc_values, color='r', align='center', tick_label=barlabels)
 ax711.bar(xbar, soc_values, color='b', align='center', tick_label=barlabels)
@@ -488,11 +506,11 @@ rgam = np.array([ 0.35  , 0.425 , 0.5  ,  0.575 , 0.65 ,  0.725 , 0.8  ])
 ggam = np.array([ 0.027435 , 0.076341,  0.12212 ,  0.16693 ,  0.20676 ,  0.22962 ,  0.52844  ])
 
 
-plt.figure(6, figsize=(3.375*0.9, 3.375*0.75*0.8))
+plt.figure(6, figsize=(3.375*0.9*1.5, 3.375*0.8*0.8*1.5))
 ax = plt.subplot(111)
 plt.plot(roa_soc[:], np.abs(gammae_soc[:]), c='b')
 plt.plot(roa_loc[:], np.abs(gammae_loc[:]), c='r')
-plt.plot(rgam[:5], ggam[:5], marker='o', c='b')
+plt.plot(rgam[:5], ggam[:5], marker='o', c='k')
 #plt.axhline(ls='--', c='k')
 plt.ylabel(r'$[a/c_s]$')
 plt.xlabel('r/a')
@@ -501,7 +519,7 @@ plt.xlim([0.25, 0.75])
 plt.ylim([0.0, .19])
 plt.tight_layout()
 
-plt.text(0.2, 0.65, '$\gamma_{\mathrm{max}}$', transform=ax.transAxes)
+plt.text(0.35, 0.65, '$\gamma_{\mathrm{max}}$', transform=ax.transAxes)
 plt.text(0.5, 0.26, '$|\gamma_{E}|$', transform=ax.transAxes)
 
 #plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')
