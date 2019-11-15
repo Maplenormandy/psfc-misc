@@ -131,7 +131,7 @@ ax12.set_xlabel('r/a')
 plt.tight_layout(h_pad=1.6)
 plt.tight_layout(h_pad=1.6)
 
-plt.savefig('figure1.eps', format='eps', dpi=1200)
+#plt.savefig('figure1.eps', format='eps', dpi=1200)
 
 # %% Figure 2: Hysteresis plot
 
@@ -152,8 +152,16 @@ def plotHysteresis(shot, ax, c='b'):
     vtime = vtime[vlow:vhigh]
     vdata = velNode.data()[0]
     vdata = vdata[vlow:vhigh]
+    
+    nlT0 = np.searchsorted(nltime, vtime-np.median(np.diff(vtime))/2)
+    nlT1 = np.searchsorted(nltime, vtime+np.median(np.diff(vtime))/2)
+    
+    nlData = np.zeros(vtime.shape)
+    for j in range(len(vtime)):
+        nlData[j] = np.average(nl04Node.data()[nlT0[j]:nlT1[j]])/1e20/0.6
 
-    nlData = np.interp(vtime, nltime, nl04Node.data())/1e20/0.6
+    #nlData = np.interp(vtime, nltime, nl04Node.data())/1e20/0.6
+    
     offset = ((shot%100)-4.0)/(25.0-7.0)*6
 
     ax.plot(nlData, vdata+offset, label=str(shot), marker='.', c=c)
@@ -192,7 +200,7 @@ ax21.set_ylabel(r'$v_{tor}$ (km/s)')
 plt.tight_layout(h_pad=1.08)
 plt.tight_layout(h_pad=1.08)
 
-plt.savefig('figure2.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure2.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 3: Profile matched plots
 
@@ -279,7 +287,7 @@ ax312.text(0.1, 0.7, '$a/L_{Ti}$', transform=ax312.transAxes)
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure3.eps', format='eps', dpi=1200, facecolor='white')
 
 # %%
 
@@ -342,7 +350,7 @@ plt.text(160, 1e-9, 'r/a = 0.53')
 plt.tight_layout(h_pad=1.08)
 plt.tight_layout(h_pad=1.08)
 
-plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure4.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 5: Growth rates / real frequencies.
 # Note: The data here is generated from ~/hys2/plot_all_freqs.py
@@ -407,7 +415,7 @@ ax52.set_xlabel(r'$k_y \rho_s$')
 plt.tight_layout(h_pad=0.0)
 plt.tight_layout(h_pad=0.0)
 
-plt.savefig('figure5.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure5.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 6: QL weights - need to go on engaging, also what to do with flux data?
 
@@ -485,4 +493,4 @@ ax60.text(0.6, 2.5, 'Ib')
 ax60.text(1.25, 2.5, 'II')
 ax60.text(6.0, 2.5, 'III')
 
-plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')
+#plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')

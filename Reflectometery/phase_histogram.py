@@ -25,7 +25,7 @@ import ShotAnalysisTools as sat
 
 # %%
 
-shot = 1160506007
+shot = 1160506015
 
 elecTree = MDSplus.Tree('electrons', shot)
 
@@ -172,7 +172,7 @@ saw = sat.findSawteeth(gpc.dim_of().data(), gpc.data(), 0.5, 1.49, threshold=-0.
 sawtimes = gpc.dim_of().data()[saw]
 sawData = gpc.data()[saw]
 
-H, xedges, yedges = np.histogram2d(st, -np.angle(np.ravel(sz))/np.pi, bins=(4000, 128))
+H, xedges, yedges = np.histogram2d(st, -np.angle(np.ravel(sz))/np.pi, bins=(8000, 128))
 H = H.T
 
 f, ax1 = plt.subplots()
@@ -201,7 +201,7 @@ ax1.pcolormesh(x, y-18, H, cmap='cubehelix')
 ax1.plot(st, hc2/np.pi+10, c='r')
 #ax2.plot(nltime[nl1:nl2], nlData[nl1:nl2], c='g')
 
-#plt.scatter(sawtimes, np.zeros(sawtimes.shape))
+plt.scatter(sawtimes, np.zeros(sawtimes.shape))
 
 # %%
 
