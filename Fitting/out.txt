@@ -1,0 +1,16 @@
+WARNING:root:Deprecation Warning: 'triangle' has been renamed to 'corner'. This shim should continue to work but you should use 'import corner' in new code. https://github.com/dfm/corner.py
+/home/normandy/git/eqtools/eqtools/AUGData.py:38: ModuleWarning: dd module could not be loaded -- classes that use dd for data access will not work.
+  ModuleWarning)
+/home/normandy/git/eqtools/eqtools/core.py:8904: RuntimeWarning: Some time points are off by more than 1/3 the EFIT point spacing. Using nearest-neighbor interpolation between time points. You may want to run EFIT on the timebase you need. Max error: 0.010s
+  RuntimeWarning
+/home/normandy/git/gptools/gptools/kernel/gibbs.py:436: RuntimeWarning: overflow encountered in cosh
+  return -(l1 - l2) / (2.0 * lw) * (scipy.cosh((x - x0) / lw))**(-2.0)
+Loaded NC version
+Working
+(35, 1)
+Computing Gradients
+[1.2422595249479829, 1.2622547380105364, 0.7587268056132449, 0.18163812947285968, 0.43525514213345512]
+Outliers done
+Computing Gradients
+[1.2407676629419297, 1.2689423156397102, 0.75587462712376197, 0.18242544915088069, 0.4382292024806449]
+saved file /home/normandy/git/psfc-misc/Fitting/FitsPoP2019/009_loc/te_dict_fit_1160506009.pkl

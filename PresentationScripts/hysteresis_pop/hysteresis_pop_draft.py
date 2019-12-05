@@ -2,6 +2,9 @@
 """
 Created on Wed Dec 19 13:52:05 2018
 
+Note that the order of figures in the code does not necessarily reflect the order
+of figures in the paper
+
 @author: normandy
 """
 
@@ -11,6 +14,8 @@ import matplotlib.colors as colors
 
 import numpy as np
 import scipy.io, scipy.signal
+
+import cPickle as pkl
 
 import MDSplus
 
@@ -191,7 +196,78 @@ plt.savefig('fig_hysteresis.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 3: Profile matched plots
 
+fig3 = plt.figure(figsize=(3.375*2, 3.375*2.0))
+fig3_rows = 6
+fig3_cols = 3
+gs3 = mpl.gridspec.GridSpec(fig3_rows,fig3_cols)
 
+ax3 = np.array([[plt.subplot(gs3[i,j]) for j in range(fig3_cols)] for i in range(fig3_rows)])
+
+# Comes from mcRaytracing.py
+itemp = np.array([ 0.58171643,  0.58086416,  0.58097034,  0.58196616,  0.58472968,
+        0.58757312,  0.5930036 ,  0.59770901,  0.60584412,  0.61244813,
+        0.62335314,  0.6319093 ,  0.60002627,  0.59638661,  0.59233809,
+        0.59035054,  0.58865633,  0.58829467,  0.58894016,  0.59020199,
+        0.59318791,  0.59607954,  0.60142963,  0.60597674,  0.61373905,
+        0.61998311,  0.63022579,  0.63822313])
+
+def plot_ion(shot, iondata, axti, axvtor, color='b'):
+    #offset = ((shot%100)-4.0)/(25.0-7.0)*6
+    offset = 0
+    
+    meas_avg = iondata['meas_avg']
+    meas_avg[:,4] = np.nan
+    
+    #specTree = MDSplus.Tree('spectroscopy', shot)
+    #pos = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS6.HELIKE.MOMENTS.W:POS').data()
+    
+    nch = iondata['meas_avg'].shape[1]
+    ch = list(reversed(range(nch)))
+    
+    axti.errorbar(ch, meas_avg[2,:]-itemp, yerr=iondata['meas_std'][2,:], c=color, fmt='.')
+    axvtor.errorbar(ch, meas_avg[1,:]+offset, yerr=iondata['meas_std'][1,:], c=color, fmt='.')
+    
+    
+    
+
+def plot_ion_pair(shot, r0):
+    socdata = np.load('/home/normandy/git/bsfc/bsfc_fits/fit_data/mf_%d_nh3_t0.npz'%shot)
+    locdata = np.load('/home/normandy/git/bsfc/bsfc_fits/fit_data/mf_%d_nh3_t2.npz'%shot)
+    
+    plot_ion(shot, locdata, ax3[r0,2], ax3[r0+1,2], 'r')
+    plot_ion(shot, socdata, ax3[r0,2], ax3[r0+1,2], 'b')
+    
+
+plot_ion_pair(1160506007, 0)
+plot_ion_pair(1160506009, 2)
+plot_ion_pair(1160506015, 4)
+
+
+def plot_profs(shot, folder, axp, axd, color='b', data='ne'):
+    prof = pkl.load(file('/home/normandy/git/psfc-misc/Fitting/FitsPoP2019/%s/%s_dict_fit_%d.pkl'%(folder, data, shot)))
+    
+    x_max = np.searchsorted(prof['X'], 0.99)
+    x_max_d = np.searchsorted(prof['X'], 0.9)
+
+    
+    axp.errorbar(prof['X'][:x_max:4], prof['y'][:x_max:4], yerr=prof['err_y'][:x_max:4], c=color, linewidth=0.8)
+    axd.errorbar(prof['X'][:x_max_d:4], prof['a_Ly'][:x_max_d:4], yerr=prof['err_a_Ly'][:x_max_d:4], c=color, linewidth=0.8)
+    
+    axp.errorbar(prof['data_x'], prof['data_y'], yerr=prof['data_err_y'], c=color, fmt='.')
+    
+    axp.set_xlim([0.0, 1.0])
+    axd.set_xlim([0.0, 1.0])
+
+def plot_pair(shot, folder_base, r0):
+    plot_profs(shot, folder_base+'_loc', ax3[r0,0], ax3[r0+1,0], 'r', 'ne')
+    plot_profs(shot, folder_base+'_soc', ax3[r0,0], ax3[r0+1,0], 'b', 'ne')
+    
+    plot_profs(shot, folder_base+'_loc', ax3[r0,1], ax3[r0+1,1], 'r', 'te')
+    plot_profs(shot, folder_base+'_soc', ax3[r0,1], ax3[r0+1,1], 'b', 'te')
+
+plot_pair(1160506007, '007', 0)
+plot_pair(1160506009, '009', 2)
+plot_pair(1160506015, '015', 4)
 
 #plt.savefig('fig_hysteresis.eps', format='eps', dpi=1200, facecolor='white')
 
@@ -199,7 +275,7 @@ plt.savefig('fig_hysteresis.eps', format='eps', dpi=1200, facecolor='white')
 
 
 
-cgyro_data = np.load(file('./1120216_cgyro_data.npz'))
+cgyro_data = np.load(file('/home/normandy/git/psfc-misc/PresentationScripts/hysteresis_pop/1120216_cgyro_data.npz'))
 
 case1_transp = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345B05/12345B05.CDF')
 case2_transp = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345A05/12345A05.CDF')
@@ -406,6 +482,7 @@ plt.savefig('fig_ql_cgyro.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 6: QL weights - need to go on engaging, also what to do with flux data?
 
+"""
 fig6 = plt.figure(6, figsize=(3.375,3.375*0.75))
 gs6 = mpl.gridspec.GridSpec(1, 2, width_ratios=[4,1])
 
@@ -481,3 +558,59 @@ ax60.text(1.25, 2.5, 'II')
 ax60.text(6.0, 2.5, 'III')
 
 #plt.savefig('figure6.eps', format='eps', dpi=1200, facecolor='white')
+"""
+
+# %% Figure 7 on vgr vs. vph
+
+
+fig7 = plt.figure(7, figsize=(3.375, 3.375*0.7))
+gs7 = mpl.gridspec.GridSpec(2, 1, hspace=0.0)
+ax7 = map(plt.subplot, gs7)
+
+def plotWaveVelocities(ky, omega, ax):
+    elec = omega>0
+    ion = omega<0
+    vph = omega/ky
+    
+    vgr_e = np.diff(omega[elec])/np.diff(ky[elec])
+    vgr_i = np.diff(omega[ion])/np.diff(ky[ion])
+    ky_e = ky[elec]
+    ky_i = ky[ion]
+    ky_e = (ky_e[1:] + ky_e[:-1])/2
+    ky_i = (ky_i[1:] + ky_i[:-1])/2
+    
+    ax.plot(ky[elec], vph[elec], c=mpl.cm.PiYG(1.0), linestyle='-', label='$v_{ph}$')
+    ax.plot(ky_e, vgr_e, c=mpl.cm.PiYG(1.0), linestyle=':', label='$v_{gr}$')
+    
+    ax.plot(ky[ion], vph[ion], c=mpl.cm.PiYG(0.0), linestyle='-')
+    ax.plot(ky_i, vgr_i, c=mpl.cm.PiYG(0.0), linestyle=':')
+    
+    ax.set_xscale('log')
+    ax.set_xlim([0.1, 30.0])
+    ax.set_ylim([-0.8, 0.8])
+    
+
+ky = cgyro_data['ky']
+omega1 = cgyro_data['omega'][1,2,:]
+
+plotWaveVelocities(ky[0,:], cgyro_data['omega'][0,3,:], ax7[0])
+plotWaveVelocities(ky[1,:], cgyro_data['omega'][1,2,:], ax7[1])
+
+plt.setp(ax7[0].get_xticklabels(), visible=False)
+ax7[1].set_xlabel(r'$k_y \rho_s$')
+ax7[1].legend(handletextpad=0.1, borderpad=0.1, labelspacing=0.0, loc='lower right')
+
+ax7[0].yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.3))
+ax7[1].yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.3))
+
+ax7[0].set_ylabel(r'$[c_s \rho_s / a]$')
+ax7[1].set_ylabel(r'$[c_s \rho_s / a]$')
+
+ax7[0].text(0.05, 0.75, 'Case I', transform=ax7[0].transAxes)
+ax7[1].text(0.05, 0.75, 'Case II', transform=ax7[1].transAxes)
+
+ax7[1].text(0.15, 0.30, 'ITG', transform=ax7[1].transAxes, color=mpl.cm.PiYG(0.0))
+ax7[1].text(0.40, 0.6, 'TEM/ETG', transform=ax7[1].transAxes, color=mpl.cm.PiYG(1.0))
+
+plt.tight_layout()
+plt.tight_layout()

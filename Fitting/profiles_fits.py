@@ -54,13 +54,13 @@ plt.close('all')
 
 # =================== USER PARAMETERS ==============================
 # For Norman:
-#shot = 1160506007; t_min = 0.57; t_max = 0.63; THT = 0; folder='soc'
+shot = 1160506007; t_min = 0.57; t_max = 0.63; THT = 0;
 #shot = 1160506007; t_min = 0.93; t_max = 0.99; THT = 0; folder='loc'
 #shot = 1150903021; t_min = 1.07; t_max = 1.09; THT = 2; folder=''
 #shot = 1120106012; t_min = 0.89; t_max = 0.95; THT = 0
 #shot = 1160725013; t_min = 0.85; t_max = 1.45; THT = 0
 
-shot = 1120216017; t_min = 1.13; t_max = 1.19; THT = 9
+#shot = 1120216017; t_min = 1.13; t_max = 1.19; THT = 9
 #shot = 1150903021; t_min = 0.99; t_max = 1.05; THT = 0
 
 # choose Ti/Te profile merging point
@@ -189,6 +189,7 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
     deltas = np.abs(res.m_gp - ne.y)/ res.s_gp #ne.err_y
     deltas[ne.err_y == 0] = 0.0
     # pdb.set_trace()
+    #bad_idxs = (deltas>=5) | (ne.err_y>0.5)
     bad_idxs = (deltas>=5) | (ne.err_y>0.5)
 
     # re-sort results from rho=0 outwards
@@ -252,6 +253,10 @@ def get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         ne_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         #ne_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         ne_prof['time'] = (t_min+t_max)/2.0
+        
+        ne_prof['data_x'] = ne.x
+        ne_prof['data_y'] = ne.y
+        ne_prof['data_err_y'] = ne.err_y
 
         if dst!=None:
             with open(dst+'/ne_dict_fit_%d.pkl'%shot,'wb') as f:
@@ -425,6 +430,10 @@ def get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, d
         te_prof['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         #te_prof['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
         te_prof['time'] = (t_min+t_max)/2.0
+        
+        te_prof['data_x'] = Te.x
+        te_prof['data_y'] = Te.y
+        te_prof['data_err_y'] = Te.err_y
 
         if dst!=None:
             with open(dst+'/te_dict_fit_%d.pkl'%shot,'wb') as f:

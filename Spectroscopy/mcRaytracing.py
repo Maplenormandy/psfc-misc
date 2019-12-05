@@ -278,7 +278,7 @@ def calculateInstrumentals(shot, module, plotting=True, writeToTree=False):
     
     
     # Use n-th order Gauss-Legendre quadrature to integrate over mirror
-    m_range, m_weights = np.polynomial.legendre.leggauss(3)
+    m_range, m_weights = np.polynomial.legendre.leggauss(5)
     m_x_grid, m_y_grid = np.meshgrid(m_range*mirror.size[0]/2.0, m_range*mirror.size[1]/2.0)
     m_grid_weights = np.outer(m_weights, m_weights).flatten()
     
@@ -332,15 +332,53 @@ def calculateInstrumentals(shot, module, plotting=True, writeToTree=False):
         instNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.CALIB.'+module+':INST')
         instNode.putData(newInst)
     
-    return lam1_grid, np.flipud(m1_grid.T), np.flipud(m2_grid.T)
+    return np.flipud(lam1_grid.T), np.flipud(m1_grid.T), np.flipud(m2_grid.T)
 
-def binInstrumentals(shot, module, tht):
-    lamw = 3.94912
-    mAr = 39.948
-    #c = 2.998e+5
-    
-    lam1, m1, m2 = calculateInstrumentals(shot, module)
-    itemp = m2 * mAr / lamw**2 * 1e6
+#def binInstrumentals(shot, module, tht):
+
+# %%
+
+shot = 1160506007
+
+lamw = 3.94912
+mAr = 39.948
+#c = 2.998e+5
+
+lam1, m1, m2 = calculateInstrumentals(shot, 'MOD1')
+itemp = m2 * mAr / lamw**2 * 1e6
+
+itemp_row = np.zeros(itemp.shape[1]*2)
+
+
+for j in range(itemp.shape[1]):
+    itemp_row[j] = np.interp(lamw, lam1[:,j], itemp[:,j])
+
+
+lam1, m1, m2 = calculateInstrumentals(shot, 'MOD2')
+itemp = m2 * mAr / lamw**2 * 1e6
+
+for j in range(itemp.shape[1]):
+    itemp_row[j+itemp.shape[1]] = np.interp(lamw, lam1[:,j], itemp[:,j])
+
+
+
+# %%
+
+
+plt.figure()
+plt.plot(itemp_row)
+
+# %%
+
+specTree = MDSplus.Tree('spectroscopy', shot)
+chmap = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS6.HELIKE.BINNING:CHMAP').data()
+nch = np.max(chmap)+1
+
+itemp_chan = np.zeros(nch)
+
+for c in range(nch):
+    inds = np.argwhere(chmap[0,:]==c)
+    itemp_chan[c] = np.average(itemp_row[inds])
 
 # %% Playing with instrument functions
 """
