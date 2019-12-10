@@ -12,6 +12,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 import numpy as np
 import scipy.io, scipy.signal
 
@@ -201,7 +203,13 @@ fig3_rows = 6
 fig3_cols = 3
 gs3 = mpl.gridspec.GridSpec(fig3_rows,fig3_cols)
 
-ax3 = np.array([[plt.subplot(gs3[i,j]) for j in range(fig3_cols)] for i in range(fig3_rows)])
+gs3_outer = mpl.gridspec.GridSpec(3, 1, hspace=0.08)
+gs3_inners = map(lambda gs: mpl.gridspec.GridSpecFromSubplotSpec(2, 3, subplot_spec=gs, hspace=0.0), gs3_outer)
+ax3 = np.array(map(lambda gs: np.array(map(plt.subplot, gs)).reshape((2,3)), gs3_inners))
+
+#ax3 = np.array(map(plt.subplot, gs3)).reshape((fig3_rows, fig3_cols))
+
+#ax3 = np.array([[plt.subplot(gs3[i,j]) for j in range(fig3_cols)] for i in range(fig3_rows)])
 
 # Comes from mcRaytracing.py
 itemp = np.array([ 0.58171643,  0.58086416,  0.58097034,  0.58196616,  0.58472968,
@@ -227,20 +235,31 @@ def plot_ion(shot, iondata, axti, axvtor, color='b'):
     axti.errorbar(ch, meas_avg[2,:]-itemp, yerr=iondata['meas_std'][2,:], c=color, fmt='.')
     axvtor.errorbar(ch, meas_avg[1,:]+offset, yerr=iondata['meas_std'][1,:], c=color, fmt='.')
     
+    plt.setp(axti.get_xticklabels(), visible=False)
+    plt.setp(axvtor.get_xticklabels(), visible=False)
     
+    axti.set_xlim([-0.5,27.5])
+    axvtor.set_xlim([-0.5,27.5])
+    
+    axti.xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
+    axvtor.xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
+    
+    
+    axti.axvline(15.5, c='k')
+    axvtor.axvline(15.5, c='k')
     
 
-def plot_ion_pair(shot, r0):
+def plot_ion_pair(shot, ax_base):
     socdata = np.load('/home/normandy/git/bsfc/bsfc_fits/fit_data/mf_%d_nh3_t0.npz'%shot)
     locdata = np.load('/home/normandy/git/bsfc/bsfc_fits/fit_data/mf_%d_nh3_t2.npz'%shot)
     
-    plot_ion(shot, locdata, ax3[r0,2], ax3[r0+1,2], 'r')
-    plot_ion(shot, socdata, ax3[r0,2], ax3[r0+1,2], 'b')
+    plot_ion(shot, locdata, ax_base[0,2], ax_base[1,2], 'r')
+    plot_ion(shot, socdata, ax_base[0,2], ax_base[1,2], 'b')
     
 
-plot_ion_pair(1160506007, 0)
-plot_ion_pair(1160506009, 2)
-plot_ion_pair(1160506015, 4)
+plot_ion_pair(1160506007, ax3[0,:,:])
+plot_ion_pair(1160506009, ax3[1,:,:])
+plot_ion_pair(1160506015, ax3[2,:,:])
 
 
 def plot_profs(shot, folder, axp, axd, color='b', data='ne'):
@@ -249,7 +268,6 @@ def plot_profs(shot, folder, axp, axd, color='b', data='ne'):
     x_max = np.searchsorted(prof['X'], 0.99)
     x_max_d = np.searchsorted(prof['X'], 0.9)
 
-    
     axp.errorbar(prof['X'][:x_max:4], prof['y'][:x_max:4], yerr=prof['err_y'][:x_max:4], c=color, linewidth=0.8)
     axd.errorbar(prof['X'][:x_max_d:4], prof['a_Ly'][:x_max_d:4], yerr=prof['err_a_Ly'][:x_max_d:4], c=color, linewidth=0.8)
     
@@ -257,31 +275,65 @@ def plot_profs(shot, folder, axp, axd, color='b', data='ne'):
     
     axp.set_xlim([0.0, 1.0])
     axd.set_xlim([0.0, 1.0])
-
-def plot_pair(shot, folder_base, r0):
-    plot_profs(shot, folder_base+'_loc', ax3[r0,0], ax3[r0+1,0], 'r', 'ne')
-    plot_profs(shot, folder_base+'_soc', ax3[r0,0], ax3[r0+1,0], 'b', 'ne')
     
-    plot_profs(shot, folder_base+'_loc', ax3[r0,1], ax3[r0+1,1], 'r', 'te')
-    plot_profs(shot, folder_base+'_soc', ax3[r0,1], ax3[r0+1,1], 'b', 'te')
+    plt.setp(axp.get_xticklabels(), visible=False)
+    plt.setp(axd.get_xticklabels(), visible=False)
+    
 
-plot_pair(1160506007, '007', 0)
-plot_pair(1160506009, '009', 2)
-plot_pair(1160506015, '015', 4)
+def plot_pair(shot, folder_base, ax_base):
+    plot_profs(shot, folder_base+'_loc', ax_base[0,0], ax_base[1,0], 'r', 'ne')
+    plot_profs(shot, folder_base+'_soc', ax_base[0,0], ax_base[1,0], 'b', 'ne')
+    
+    plot_profs(shot, folder_base+'_loc', ax_base[0,1], ax_base[1,1], 'r', 'te')
+    plot_profs(shot, folder_base+'_soc', ax_base[0,1], ax_base[1,1], 'b', 'te')
 
-#plt.savefig('fig_hysteresis.eps', format='eps', dpi=1200, facecolor='white')
+plot_pair(1160506007, '007', ax3[0,:,:])
+plot_pair(1160506009, '009', ax3[1,:,:])
+plot_pair(1160506015, '015', ax3[2,:,:])
+
+plt.setp(ax3[2,1,0].get_xticklabels(), visible=True)
+plt.setp(ax3[2,1,1].get_xticklabels(), visible=True)
+ax3[2,1,0].set_xlabel('r/a')
+ax3[2,1,1].set_xlabel('r/a')
+
+plt.setp(ax3[2,1,2].get_xticklabels(), visible=True)
+ax3[2,1,2].set_xlabel('Spatial Channel')
+
+for i in range(3):
+    ax3[i,0,0].text(0.08, 0.2, r'$n_e$ [$10^{20}$ m$^{-3}$]', transform=ax3[i,0,0].transAxes, va='center', ha='left')
+    ax3[i,1,0].text(0.08, 0.7, r'$a/L_{ne}$', transform=ax3[i,1,0].transAxes, va='center', ha='left')
+    
+    ax3[i,0,1].text(0.08, 0.2, r'$T_e$ [keV]', transform=ax3[i,0,1].transAxes, va='center', ha='left')
+    ax3[i,1,1].text(0.08, 0.7, r'$a/L_{Te}$', transform=ax3[i,1,1].transAxes, va='center', ha='left')
+    
+    ax3[i,0,2].text(0.08, 0.2, r'$\overline{T}_i$ [keV]', transform=ax3[i,0,2].transAxes, va='center', ha='left')
+    ax3[i,1,2].text(0.08, 0.2, r'$\bar{v}_{tor}$ [km/s]', transform=ax3[i,1,2].transAxes, va='center', ha='left')
+
+ax3[0,0,0].annotate(r'Case I (0.8 MA Ohmic)', xy=(-0.25,0.0), ha='right', va='center', xycoords='axes fraction', rotation='90')
+ax3[1,0,0].annotate(r'Case II (1.1 MA Ohmic)', xy=(-0.25,0.0), ha='right', va='center', xycoords='axes fraction', rotation='90')
+ax3[2,0,0].annotate(r'Case III (0.8 MA +ICRF)', xy=(-0.25,0.0), ha='right', va='center', xycoords='axes fraction', rotation='90')
+#ax3[0,0,0].annotate(-0.05, 0.0, )
+
+plt.savefig('fig_profiles.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Plots of growth rates
-
-
 
 cgyro_data = np.load(file('/home/normandy/git/psfc-misc/PresentationScripts/hysteresis_pop/1120216_cgyro_data.npz'))
 
 case1_transp = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345B05/12345B05.CDF')
 case2_transp = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345A05/12345A05.CDF')
 
-fig4 = plt.figure(4, figsize=(3.375*2, 3.375*1.2))
-gs4 = mpl.gridspec.GridSpec(2, 3)
+
+# %%
+
+fig4 = plt.figure(4, figsize=(3.375*2, 3.375*1.4))
+gs4_outer = mpl.gridspec.GridSpec(2, 1, height_ratios=[40,1])
+gs4 = mpl.gridspec.GridSpecFromSubplotSpec(2, 3, subplot_spec=gs4_outer[0])
+
+gs4_bot = mpl.gridspec.GridSpecFromSubplotSpec(1, 3, subplot_spec=gs4_outer[1])
+ax4_cax = plt.subplot(gs4_bot[0])
+
+#gs4 = mpl.gridspec.GridSpec(2, 3)
 
 ax400 = plt.subplot(gs4[0,0])
 ax410 = plt.subplot(gs4[1,0])
@@ -302,7 +354,7 @@ gamma_plot = np.copy(cgyro_data['gamma'])
 gamma_plot[gamma_plot<0] = 0
 gamma_plot = gamma_plot * np.sign(cgyro_data['omega'])
 
-norm = colors.SymLogNorm(linthresh=0.2, linscale=0.2, vmin=-2.0, vmax=2.0)
+norm = colors.Normalize(vmin=-1.5, vmax=1.5)
 
 ky_max = 12
 ky_ion = 6
@@ -318,13 +370,16 @@ def shiftByHalf(x):
 ky0 = shiftByHalf(cgyro_data['ky'][0,:ky_max])
 r0 = shiftByHalf(cgyro_data['radii'][0,:])
 gmax_ion0 = np.max(cgyro_data['gamma'][0,:,:ky_ion], axis=1)
-ax400.pcolormesh(r0, ky0, (gamma_plot[0,:,:ky_max]/gmax_ion0[:,np.newaxis]).T, norm=norm, cmap='PiYG')
+pc = ax400.pcolormesh(r0, ky0, (gamma_plot[0,:,:ky_max]/gmax_ion0[:,np.newaxis]).T, norm=norm, cmap='PiYG')
 
 
 ky1 = shiftByHalf(cgyro_data['ky'][1,:ky_max])
 r1 = shiftByHalf(cgyro_data['radii'][1,:])
 gmax_ion1 = np.max(cgyro_data['gamma'][1,:,:ky_ion], axis=1)
 ax410.pcolormesh(r1, ky1, (gamma_plot[1,:,:ky_max]/gmax_ion1[:,np.newaxis]).T, norm=norm, cmap='PiYG')
+
+cb = plt.colorbar(pc, cax=ax4_cax, orientation='horizontal', label=r'$(\gamma / \gamma_{\mathrm{max,ion}}) \mathrm{sign}(\omega_R)$', ticks=[-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5])
+cb.ax.set_xticklabels(['<-1.5','-1.0','-0.5','0.0','0.5','1.0','>1.5'])
 
 # TODO: Figure out how to get the actual midplane radius?
 def plotTransp(ax, transp, times, rbounds):
@@ -347,14 +402,14 @@ ax401.plot(cgyro_data['radii'][0,:], gmax_ion0, c='k', marker='.')
 plotTransp(ax411, case2_transp, (1.25, 1.41), (r1[0], r1[-1]))
 ax411.plot(cgyro_data['radii'][1,:], gmax_ion1, c='k', marker='.')
 
-ax4020.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['omega'][0,3,:ky_max], c='k', marker='+')
-ax4021.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['gamma'][0,3,:ky_max], c='k', marker='+')
+ax4020.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['omega'][0,3,:ky_max], c='k', marker='.')
+ax4021.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['gamma'][0,3,:ky_max], c='k', marker='.')
 ax4020.axhline(ls='--', c='k')
 ax4021.axhline(ls='--', c='k')
 plt.setp(ax4020.get_xticklabels(), visible=False)
 
-ax4120.plot(cgyro_data['ky'][1,:ky_max], cgyro_data['omega'][1,2,:ky_max], c='k', marker='+')
-ax4121.plot(cgyro_data['ky'][1,:ky_max], cgyro_data['gamma'][1,2,:ky_max], c='k', marker='+')
+ax4120.plot(cgyro_data['ky'][1,:ky_max], cgyro_data['omega'][1,2,:ky_max], c='k', marker='.')
+ax4121.plot(cgyro_data['ky'][1,:ky_max], cgyro_data['gamma'][1,2,:ky_max], c='k', marker='.')
 ax4120.axhline(ls='--', c='k')
 ax4021.axhline(ls='--', c='k')
 plt.setp(ax4120.get_xticklabels(), visible=False)
@@ -372,13 +427,22 @@ ax4120.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5))
 ax4021.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
 ax4121.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
 
-ax400.set_title(r'$k_y \rho_s$', loc='left')
-ax401.set_title(r'$[c_s/a]$', loc='left')
-ax4020.set_title(r'$[c_s/a]$', loc='left')
+#ax400.set_ylabel(r'$k_y \rho_s$')
+#ax401.set_ylabel(r'$[c_s/a]$')
+#ax4020.set_ylabel(r'$[c_s/a]$')
+
+ax400.annotate(r'$k_y \rho_s$', xy=(0,1.02), ha='right', va='bottom', xycoords='axes fraction')
+ax401.annotate(r'$[c_s/a]$', xy=(0,1.02), ha='right', va='bottom', xycoords='axes fraction')
+ax4020.annotate(r'$[c_s/a]$', xy=(0,1.04), ha='right', va='bottom', xycoords='axes fraction')
+
 
 ax410.set_xlabel('r/a')
 ax411.set_xlabel('r/a')
 ax4121.set_xlabel(r'$k_y \rho_s$')
+
+ax400.set_title('Elec./Ion Dominance', fontsize=10)
+ax401.set_title(r'Growth vs. Shear', fontsize=10)
+ax4020.set_title('Eigenspectrum', fontsize=10)
 
 ax400.set_ylabel('Case I (0.8 MA Ohmic)')
 ax410.set_ylabel('Case II (1.1 MA Ohmic)')
@@ -396,6 +460,8 @@ ax4021.text(0.05, 0.75, r'$\gamma$', transform=ax4021.transAxes)
 ax4120.text(0.05, 0.75, r'$\omega_R$', transform=ax4120.transAxes)
 ax4121.text(0.05, 0.75, r'$\gamma$', transform=ax4121.transAxes)
 
+
+
 plt.tight_layout()
 plt.tight_layout()
 
@@ -406,13 +472,7 @@ plt.savefig('fig_lin_cgyro.eps', format='eps', dpi=1200, facecolor='white')
 
 fig5 = plt.figure(5, figsize=(3.375*2, 3.375*1.2))
 gs5 = mpl.gridspec.GridSpec(2, 3, wspace=0.0)
-
-ax500 = plt.subplot(gs5[0,0])
-ax510 = plt.subplot(gs5[1,0])
-ax501 = plt.subplot(gs5[0,1])
-ax511 = plt.subplot(gs5[1,1])
-ax502 = plt.subplot(gs5[0,2])
-ax512 = plt.subplot(gs5[1,2])
+ax5 = np.array(map(plt.subplot, gs5)).reshape(2,3)
 
 def plotQlWeight(ax, ky, pflux, qeflux, qiflux, gamma, alpha):
     gamma_cut = np.max(gamma[:6])*alpha
@@ -449,29 +509,29 @@ def plotQlWeight(ax, ky, pflux, qeflux, qiflux, gamma, alpha):
             ky_fs[j] = (ky[i+1]-ky[i]) * np.abs(pflux[i]/(pflux[i+1]-pflux[i])) + ky[i]
     ax.scatter(ky_fs[0], 0, marker='*', c=(1.0, 0.5, 0.0), s=120, zorder=20, linewidth=0)
     
-plotQlWeight(ax500, cgyro_data['ky'][0,:], cgyro_data['pflux'][0,1,:], cgyro_data['qeflux'][0,1,:], cgyro_data['qiflux'][0,1,:], cgyro_data['gamma'][0,1,:], 0.4)
-plotQlWeight(ax501, cgyro_data['ky'][0,:], cgyro_data['pflux'][0,3,:], cgyro_data['qeflux'][0,3,:], cgyro_data['qiflux'][0,3,:], cgyro_data['gamma'][0,3,:], 0.4)
-plotQlWeight(ax502, cgyro_data['ky'][0,:], cgyro_data['pflux'][0,5,:], cgyro_data['qeflux'][0,5,:], cgyro_data['qiflux'][0,5,:], cgyro_data['gamma'][0,5,:], 0.4)
+plotQlWeight(ax5[0,0], cgyro_data['ky'][0,:], cgyro_data['pflux'][0,1,:], cgyro_data['qeflux'][0,1,:], cgyro_data['qiflux'][0,1,:], cgyro_data['gamma'][0,1,:], 0.4)
+plotQlWeight(ax5[0,1], cgyro_data['ky'][0,:], cgyro_data['pflux'][0,3,:], cgyro_data['qeflux'][0,3,:], cgyro_data['qiflux'][0,3,:], cgyro_data['gamma'][0,3,:], 0.4)
+plotQlWeight(ax5[0,2], cgyro_data['ky'][0,:], cgyro_data['pflux'][0,5,:], cgyro_data['qeflux'][0,5,:], cgyro_data['qiflux'][0,5,:], cgyro_data['gamma'][0,5,:], 0.4)
 
-plotQlWeight(ax510, cgyro_data['ky'][1,:], cgyro_data['pflux'][1,1,:], cgyro_data['qeflux'][1,1,:], cgyro_data['qiflux'][1,1,:], cgyro_data['gamma'][1,1,:], 0.7)
-plotQlWeight(ax511, cgyro_data['ky'][1,:], cgyro_data['pflux'][1,2,:], cgyro_data['qeflux'][1,2,:], cgyro_data['qiflux'][1,2,:], cgyro_data['gamma'][1,2,:], 0.7)
-plotQlWeight(ax512, cgyro_data['ky'][1,:], cgyro_data['pflux'][1,3,:], cgyro_data['qeflux'][1,3,:], cgyro_data['qiflux'][1,3,:], cgyro_data['gamma'][1,3,:], 0.7)
+plotQlWeight(ax5[1,0], cgyro_data['ky'][1,:], cgyro_data['pflux'][1,1,:], cgyro_data['qeflux'][1,1,:], cgyro_data['qiflux'][1,1,:], cgyro_data['gamma'][1,1,:], 0.7)
+plotQlWeight(ax5[1,1], cgyro_data['ky'][1,:], cgyro_data['pflux'][1,2,:], cgyro_data['qeflux'][1,2,:], cgyro_data['qiflux'][1,2,:], cgyro_data['gamma'][1,2,:], 0.7)
+plotQlWeight(ax5[1,2], cgyro_data['ky'][1,:], cgyro_data['pflux'][1,3,:], cgyro_data['qeflux'][1,3,:], cgyro_data['qiflux'][1,3,:], cgyro_data['gamma'][1,3,:], 0.7)
 
-plt.setp(ax500.get_yticklabels(), visible=True)
-plt.setp(ax510.get_yticklabels(), visible=True)
+plt.setp(ax5[0,0].get_yticklabels(), visible=True)
+plt.setp(ax5[1,0].get_yticklabels(), visible=True)
 
-ax500.set_ylabel('Case I (0.8 MA Ohmic)')
-ax510.set_ylabel('Case II (1.1 MA Ohmic)')
+ax5[0,0].set_ylabel('Case I (0.8 MA Ohmic)')
+ax5[1,0].set_ylabel('Case II (1.1 MA Ohmic)')
 
-l = ax512.legend(loc='center right', fontsize=10)
+l = ax5[1,2].legend(loc='center right', fontsize=10)
 l.set_zorder(100)
 
-ax500.set_title('r/a=0.5', fontsize=10)
-ax501.set_title('r/a=0.6', fontsize=10)
-ax502.set_title('r/a=0.7', fontsize=10)
-ax510.set_title('r/a=0.55', fontsize=10)
-ax511.set_title('r/a=0.6', fontsize=10)
-ax512.set_title('r/a=0.65', fontsize=10)
+ax5[0,0].set_title('r/a=0.5', fontsize=10)
+ax5[0,1].set_title('r/a=0.6', fontsize=10)
+ax5[0,2].set_title('r/a=0.7', fontsize=10)
+ax5[1,0].set_title('r/a=0.55', fontsize=10)
+ax5[1,1].set_title('r/a=0.6', fontsize=10)
+ax5[1,2].set_title('r/a=0.65', fontsize=10)
 
 
 
@@ -564,7 +624,7 @@ ax60.text(6.0, 2.5, 'III')
 
 
 fig7 = plt.figure(7, figsize=(3.375, 3.375*0.7))
-gs7 = mpl.gridspec.GridSpec(2, 1, hspace=0.0)
+gs7 = mpl.gridspec.GridSpec(2, 1, hspace=0.00)
 ax7 = map(plt.subplot, gs7)
 
 def plotWaveVelocities(ky, omega, ax):
@@ -606,11 +666,114 @@ ax7[1].yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.3))
 ax7[0].set_ylabel(r'$[c_s \rho_s / a]$')
 ax7[1].set_ylabel(r'$[c_s \rho_s / a]$')
 
-ax7[0].text(0.05, 0.75, 'Case I', transform=ax7[0].transAxes)
-ax7[1].text(0.05, 0.75, 'Case II', transform=ax7[1].transAxes)
+ax7[0].text(0.02, 0.8, '(0.8 MA Ohmic)', transform=ax7[0].transAxes)
+ax7[1].text(0.02, 0.8, '(1.1 MA Ohmic)', transform=ax7[1].transAxes)
 
 ax7[1].text(0.15, 0.30, 'ITG', transform=ax7[1].transAxes, color=mpl.cm.PiYG(0.0))
 ax7[1].text(0.40, 0.6, 'TEM/ETG', transform=ax7[1].transAxes, color=mpl.cm.PiYG(1.0))
 
 plt.tight_layout()
 plt.tight_layout()
+
+
+plt.savefig('fig_wavevel.eps', format='eps', dpi=1200, facecolor='white')
+
+# %% Figure 8, PCI plots
+
+fig8 = plt.figure(8, figsize=(3.375, 3.375*1.5))
+gs8_outer = mpl.gridspec.GridSpec(2, 1, height_ratios=[50,1])
+gs8 = mpl.gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs8_outer[0], wspace=0.0, hspace=0.08)
+#gs8_right = mpl.gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs8_outer[1], wspace=0.0)
+ax8_cax = plt.subplot(gs8_outer[1])
+
+#gs8 = mpl.gridspec.GridSpec(4, 2, wspace=0.0, height_ratios=[10,10,10,1])
+ax8 = np.array(map(plt.subplot, gs8)).reshape((3,2))
+#ax8_cax = plt.subplot(gs8[3,:])
+
+
+
+
+def plotPci(shot, ax_loc, ax_soc, t_loc, t_soc):
+    idlsav = scipy.io.readsav('/home/normandy/%d_pci.sav'%shot)
+
+    t = idlsav.spec.t[0]
+    f = idlsav.spec.f[0]
+    k = idlsav.spec.k[0]
+    s = idlsav.spec.spec[0]
+    #shot = idlsav.spec.shot[0]
+    
+    t0, t1 = np.searchsorted(t, (t_soc, t_loc))
+    
+    kplot = shiftByHalf(k)
+    fplot = shiftByHalf(f)
+    
+    ax_soc.pcolormesh(kplot, fplot, s[t0,:,:], cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-6, vmax=1e-1))
+    pc = ax_loc.pcolormesh(kplot, fplot, s[t1,:,:], cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-6, vmax=1e-1))
+    
+    plt.setp(ax_soc.get_yticklabels(), visible=False)
+    ax_loc.yaxis.tick_right()
+    ax_loc.yaxis.set_label_position('right')
+    plt.setp(ax_loc.get_xticklabels(), visible=False)
+    plt.setp(ax_soc.get_xticklabels(), visible=False)
+    ax_soc.xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+    ax_loc.xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+    ax_loc.yaxis.set_major_locator(mpl.ticker.MultipleLocator(200))
+    
+    #plt.colorbar(pc)
+    
+    ax_soc.set_xlim([-25, 25])
+    ax_loc.set_xlim([-25, 25])
+    ax_soc.set_ylim([0, 750])
+    ax_loc.set_ylim([0, 750])
+    
+    return pc
+    
+plotPci(1160506007, ax8[0,1], ax8[0,0], 0.96, 0.6)
+plotPci(1160506009, ax8[1,1], ax8[1,0], 0.92, 0.72)
+pc = plotPci(1160506015, ax8[2,1], ax8[2,0], 0.9, 0.68)
+
+plt.setp(ax8[2,0].get_xticklabels(), visible=True)
+plt.setp(ax8[2,1].get_xticklabels(), visible=True)
+
+ax8[1,1].set_ylabel(r'Frequency [kHz]')
+ax8[2,0].set_xlabel(r'$k_R\ [\mathrm{cm}^{-1}]$')
+ax8[2,1].set_xlabel(r'$k_R\ [\mathrm{cm}^{-1}]$')
+
+ax8[0,0].set_title('SOC', color='b')
+ax8[0,1].set_title('LOC', color='r')
+
+#plt.text(0.0, 0.5, '0.8 MA Ohmic', horizontalalignment='center', verticalalignment='center', transform=ax8[0,0].transAxes, bbox=dict(facecolor='white'), rotation='90')
+#plt.text(0.0, 0.5, '1.1 MA Ohmic', horizontalalignment='center', verticalalignment='center', transform=ax8[1,0].transAxes, bbox=dict(facecolor='white'), rotation='90')
+#plt.text(0.0, 0.5, '0.8 MA +ICRF', horizontalalignment='center', verticalalignment='center', transform=ax8[2,0].transAxes, bbox=dict(facecolor='white'), rotation='90')
+
+ax8[0,0].set_ylabel('(0.8 MA Ohmic)')
+ax8[1,0].set_ylabel('(1.1 MA Ohmic)')
+ax8[2,0].set_ylabel('(0.8 MA +ICRF)')
+
+
+cb = plt.colorbar(pc, cax=ax8_cax, use_gridspec=True, orientation='horizontal')
+cb.set_label(r'Intensity [($10^{18}$ m$^{-2}$)$^2$/cm$^{-1}$/kHz]')
+
+plt.tight_layout()
+plt.tight_layout()
+
+plt.savefig('fig_pci_spec.png', format='png', dpi=1200, facecolor='white')
+
+# %%
+kp = np.sum(s[:,:,18:24], axis=2)
+kn = np.sum(s[:,:,10:16], axis=2)
+
+kall = np.concatenate((kn[:,299:29:-1], kp[:,30:300]), axis=1)
+fall = np.concatenate((-f[299:29:-1], f[30:300]))
+
+plt.figure()
+plt.pcolormesh(t, fall, np.log(kall.T), cmap='cubehelix')
+
+totalp = np.sum(kp[:,30:300], axis=1)
+totaln = np.sum(kn[:,30:300], axis=1)
+
+plt.figure()
+plt.plot(t, totalp)
+plt.plot(t, totaln)
+
+# %%
