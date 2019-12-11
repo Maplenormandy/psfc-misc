@@ -680,17 +680,20 @@ plt.savefig('fig_wavevel.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 8, PCI plots
 
-fig8 = plt.figure(8, figsize=(3.375, 3.375*1.5))
-gs8_outer = mpl.gridspec.GridSpec(2, 1, height_ratios=[50,1])
-gs8 = mpl.gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs8_outer[0], wspace=0.0, hspace=0.08)
+fig8 = plt.figure(8, figsize=(3.375*2, 3.375*1.5))
+gs8_outer = mpl.gridspec.GridSpec(2, 2, height_ratios=[50,1], width_ratios=[2,2])
+gs8 = mpl.gridspec.GridSpecFromSubplotSpec(3, 2, subplot_spec=gs8_outer[0,0], wspace=0.0, hspace=0.08)
 #gs8_right = mpl.gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs8_outer[1], wspace=0.0)
-ax8_cax = plt.subplot(gs8_outer[1])
+ax8_cax = plt.subplot(gs8_outer[1,0])
+
+gs8_right = mpl.gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs8_outer[0,1], hspace=0.08)
 
 #gs8 = mpl.gridspec.GridSpec(4, 2, wspace=0.0, height_ratios=[10,10,10,1])
 ax8 = np.array(map(plt.subplot, gs8)).reshape((3,2))
+ax8_right = np.array(map(plt.subplot, gs8_right))
 #ax8_cax = plt.subplot(gs8[3,:])
 
-
+ax8_last = plt.subplot(gs8_outer[1,1])
 
 
 def plotPci(shot, ax_loc, ax_soc, t_loc, t_soc):
@@ -705,19 +708,22 @@ def plotPci(shot, ax_loc, ax_soc, t_loc, t_soc):
     t0, t1 = np.searchsorted(t, (t_soc, t_loc))
     
     kplot = shiftByHalf(k)
+    #kplot = np.concatenate((k, [-k[0]]))
     fplot = shiftByHalf(f)
     
-    ax_soc.pcolormesh(kplot, fplot, s[t0,:,:], cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-6, vmax=1e-1))
-    pc = ax_loc.pcolormesh(kplot, fplot, s[t1,:,:], cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-6, vmax=1e-1))
+    ax_soc.pcolormesh(kplot, fplot, s[t0,:,:], cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-6, vmax=1e-1), rasterized=True)
+    pc = ax_loc.pcolormesh(kplot, fplot, s[t1,:,:], cmap='cubehelix', norm=mpl.colors.LogNorm(vmin=1e-6, vmax=1e-1), rasterized=True)
     
-    plt.setp(ax_soc.get_yticklabels(), visible=False)
-    ax_loc.yaxis.tick_right()
-    ax_loc.yaxis.set_label_position('right')
+    plt.setp(ax_loc.get_yticklabels(), visible=False)
+    
     plt.setp(ax_loc.get_xticklabels(), visible=False)
     plt.setp(ax_soc.get_xticklabels(), visible=False)
     ax_soc.xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
     ax_loc.xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
     ax_loc.yaxis.set_major_locator(mpl.ticker.MultipleLocator(200))
+    ax_soc.yaxis.set_major_locator(mpl.ticker.MultipleLocator(200))
+    
+    plt.setp(ax_soc.get_yticklabels(), rotation=45)
     
     #plt.colorbar(pc)
     
@@ -735,7 +741,10 @@ pc = plotPci(1160506015, ax8[2,1], ax8[2,0], 0.9, 0.68)
 plt.setp(ax8[2,0].get_xticklabels(), visible=True)
 plt.setp(ax8[2,1].get_xticklabels(), visible=True)
 
-ax8[1,1].set_ylabel(r'Frequency [kHz]')
+ax8[0,0].annotate(r'f [kHz]', xy=(0.02,1.02), ha='right', va='bottom', xycoords='axes fraction')
+
+
+
 ax8[2,0].set_xlabel(r'$k_R\ [\mathrm{cm}^{-1}]$')
 ax8[2,1].set_xlabel(r'$k_R\ [\mathrm{cm}^{-1}]$')
 
@@ -757,23 +766,83 @@ cb.set_label(r'Intensity [($10^{18}$ m$^{-2}$)$^2$/cm$^{-1}$/kHz]')
 plt.tight_layout()
 plt.tight_layout()
 
-plt.savefig('fig_pci_spec.png', format='png', dpi=1200, facecolor='white')
 
-# %%
-kp = np.sum(s[:,:,18:24], axis=2)
-kn = np.sum(s[:,:,10:16], axis=2)
+def plotPciAsym(shot, ax):
+    idlsav = scipy.io.readsav('/home/normandy/%d_pci.sav'%shot)
+    
+    t = idlsav.spec.t[0]
+    f = idlsav.spec.f[0]
+    k = idlsav.spec.k[0]
+    s = idlsav.spec.spec[0]
+    
+    fc = np.searchsorted(f, (50, 200, 200, 700))
+    
+    #sn = s[:,:,1:16]
+    #sp = s[:,:,17:32]
+    
+    #pn = np.sum(sn, axis=2)
+    #pp = np.sum(sp, axis=2)
+    
+    #ax.pcolormesh(t, f, pp.T, norm=mpl.colors.LogNorm(vmin=1e-5, vmax=1.0), cmap='cubehelix')
+    #ax.pcolormesh(t, -f, pn.T, norm=mpl.colors.LogNorm(vmin=1e-5, vmax=1.0), cmap='cubehelix')
+    
+    
+    
+    #kp = np.sum(s[:,:,18:24], axis=2)
+    #kn = np.sum(s[:,:,10:16], axis=2)
+    kp = np.sum(s[:,:,17:32], axis=2)
+    kn = np.sum(s[:,:,1:16], axis=2)
+    
+    #kall = np.concatenate((kn[:,299:29:-1], kp[:,30:300]), axis=1)
+    #fall = np.concatenate((-f[299:29:-1], f[30:300]))
+    
+    totalp = np.sum(kp[:,fc[0]:fc[1]], axis=1)
+    totaln = np.sum(kn[:,fc[0]:fc[1]], axis=1)
+    asym = (totalp-totaln)/(totalp+totaln)*2
+    ax.plot(t, asym, c=mpl.cm.PiYG(0.0))
+    
+    totalp = np.sum(kp[:,fc[2]:fc[3]], axis=1)
+    totaln = np.sum(kn[:,fc[2]:fc[3]], axis=1)
+    asym = (totalp-totaln)/(totalp+totaln)*2
+    ax.plot(t, asym, c=mpl.cm.PiYG(1.0))
 
-kall = np.concatenate((kn[:,299:29:-1], kp[:,30:300]), axis=1)
-fall = np.concatenate((-f[299:29:-1], f[30:300]))
+    ax.axhline(c='k', ls='--')
+    ax.set_ylim([-0.7, 0.7])
+    
+    plt.setp(ax.get_xticklabels(), visible=False)
 
-plt.figure()
-plt.pcolormesh(t, fall, np.log(kall.T), cmap='cubehelix')
+ax8_right[0].clear()    
 
-totalp = np.sum(kp[:,30:300], axis=1)
-totaln = np.sum(kn[:,30:300], axis=1)
+ax8_right[0].axvspan(0.5, 0.75, color=(0.8, 0.8, 1.0))
+ax8_right[0].axvspan(0.84, 1.15, color=(1.0, 0.8, 0.8))
+ax8_right[0].axvspan(1.22, 1.4, color=(0.8, 0.8, 1.0))
 
-plt.figure()
-plt.plot(t, totalp)
-plt.plot(t, totaln)
+ax8_right[1].clear()    
+
+ax8_right[1].axvspan(0.5, 0.75, color=(0.8, 0.8, 1.0))
+ax8_right[1].axvspan(0.83, 1.05, color=(1.0, 0.8, 0.8))
+ax8_right[1].axvspan(1.15, 1.39, color=(0.8, 0.8, 1.0))
+
+ax8_right[2].clear()    
+
+ax8_right[2].axvspan(0.5, 0.71, color=(0.8, 0.8, 1.0))
+ax8_right[2].axvspan(0.87, 0.95, color=(1.0, 0.8, 0.8))
+ax8_right[2].axvspan(1.12, 1.37, color=(0.8, 0.8, 1.0))
+
+plotPciAsym(1160506007, ax8_right[0])
+plotPciAsym(1160506009, ax8_right[1])
+plotPciAsym(1160506015, ax8_right[2])
+
+ax8_last.axis('off')
+ax8_last.annotate(r'$50<f<200$', xy=(0.15,0.5), ha='left', va='center', xycoords='axes fraction', color=mpl.cm.PiYG(0.0))
+ax8_last.annotate(r'$200<f<700$', xy=(0.85,0.5), ha='right', va='center', xycoords='axes fraction', color=mpl.cm.PiYG(1.0))
+ax8_last.annotate(r'[kHz]', xy=(0.5,-2), ha='center', va='center', xycoords='axes fraction')
+    
+plt.setp(ax8_right[2].get_xticklabels(), visible=True)
+ax8_right[2].set_xlabel('time [sec]')
+ax8_right[0].set_title('PCI Asymmetry')
+    
+
+plt.savefig('fig_pci_spec.eps', format='eps', dpi=240, facecolor='white')
 
 # %%
