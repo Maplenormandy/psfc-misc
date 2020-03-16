@@ -84,7 +84,7 @@ lamw = 3.9490665
 
 # %% Plot tokamak and such
 
-shot = 1150903021
+shot = 1101014030
 
 e = eqtools.CModEFITTree(shot)
 rgrid = e.getRGrid()
@@ -177,12 +177,12 @@ for i_m, j_m in itertools.product(range(n_i_m), range(n_j_m)):
         
         # Now, using formula C.9, draw the sightline
         ray = cylRay(pos_m_k, r_mp_k, np.linspace(0, 4))
-        """
+        
         plt.figure(1)
         plt.plot(ray[0], ray[2], c=((mxi+1.0)/2.0, (mzeta+1.0)/2.0, 0.0))
         plt.figure(2)
         plt.plot(ray[0]*np.cos(ray[1]), ray[0]*np.sin(ray[1]), c=((mxi+1.0)/2.0, (mzeta+1.0)/2.0, 0.0))
-        """
+        
         
         # Calculate wavelength of bragg angle
         wavebin[k_det, i_m, j_m] = -l_dm_m.dot(n_m)*m.bragg.twod
