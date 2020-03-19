@@ -113,7 +113,7 @@ ax11.set_ylabel('$v_{tor}$ (km/s)')
 ax11.set_xlabel('time (sec)')
 ax11.set_xlim([0.5, 1.5])
 
-tloc, tsoc = np.searchsorted(td.time, (1.25, 1.43))
+tloc, tsoc = np.searchsorted(td.time, (1.21, 1.43))
 rmax = np.searchsorted(td.roa, 0.9)
 vloc = np.average(td.pro[1,tloc-1:tloc+1,:],axis=0)
 verrloc = np.average(td.perr[1,tloc-1:tloc+1,:],axis=0)
@@ -399,15 +399,15 @@ ax3[2,0,0].annotate(r'Case III (0.8 MA +ICRF)', xy=(-0.25,0.0), ha='right', va='
 
 plt.savefig('fig_profiles.eps', format='eps', dpi=1200, facecolor='white')
 
-# %% Plots of growth rates
+# %% Figure 4: Plots of growth rates
 
 cgyro_data = np.load(file('/home/normandy/git/psfc-misc/PresentationScripts/hysteresis_pop/1120216_cgyro_data.npz'))
 
-case1_transp = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345B05/12345B05.CDF')
-case2_transp = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345A05/12345A05.CDF')
+case1_transp = scipy.io.netcdf.netcdf_file('/home/normandy/hysteresis_transp/12345B05/12345B05.CDF')
+case2_transp = scipy.io.netcdf.netcdf_file('/home/normandy/hysteresis_transp/12345A05/12345A05.CDF')
 
 
-# %%
+# %% Do actual plotting here
 
 fig4 = plt.figure(4, figsize=(3.375*2, 3.375*1.4))
 gs4_outer = mpl.gridspec.GridSpec(2, 1, height_ratios=[40,1])
@@ -464,8 +464,7 @@ ax410.pcolormesh(r1, ky1, (gamma_plot[1,:,:ky_max]/gmax_ion1[:,np.newaxis]).T, n
 cb = plt.colorbar(pc, cax=ax4_cax, orientation='horizontal', label=r'$(\gamma / \gamma_{\mathrm{max,ion}}) \mathrm{sign}(\omega_R)$', ticks=[-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5])
 cb.ax.set_xticklabels(['<-1.5','-1.0','-0.5','0.0','0.5','1.0','>1.5'])
 
-# TODO: Figure out how to get the actual midplane radius?
-def plotTransp(ax, transp, times, rbounds):
+def plotTranspShear(ax, transp, times, rbounds, ax_gamma, gamma_roa):
     time = transp.variables['TIME'].data
     roa = transp.variables['RMNMP'].data / 21.878
 
@@ -479,14 +478,18 @@ def plotTransp(ax, transp, times, rbounds):
     ax.plot(roa[t0-1,r0:r1], shear[t0-1,r0:r1]/cs[t0-1,r0:r1]*21.878, c='r')
     ax.plot(roa[t1-1,r0:r1], shear[t1-1,r0:r1]/cs[t0-1,r0:r1]*21.878, c='b')
 
+    rind = rind = np.searchsorted(roa[t0-1,:], gamma_roa)
+    ax_gamma.axhline(shear[t0-1,rind]/cs[t0-1,rind]*21.878, c='r')
+    ax_gamma.axhline(shear[t1-1,rind]/cs[t0-1,rind]*21.878, c='b')
 
-plotTransp(ax401, case1_transp, (0.95, 1.47), (r0[0], r0[-1]))
+
+plotTranspShear(ax401, case1_transp, (0.95, 1.47), (r0[0], r0[-1]), ax4021, 0.55)
 ax401.plot(cgyro_data['radii'][0,:], gmax_ion0, c='k', marker='.')
-plotTransp(ax411, case2_transp, (1.25, 1.41), (r1[0], r1[-1]))
+plotTranspShear(ax411, case2_transp, (1.21, 1.41), (r1[0], r1[-1]), ax4121, 0.6)
 ax411.plot(cgyro_data['radii'][1,:], gmax_ion1, c='k', marker='.')
 
-ax4020.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['omega'][0,3,:ky_max], c='k', marker='.')
-ax4021.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['gamma'][0,3,:ky_max], c='k', marker='.')
+ax4020.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['omega'][0,2,:ky_max], c='k', marker='.')
+ax4021.plot(cgyro_data['ky'][0,:ky_max], cgyro_data['gamma'][0,2,:ky_max], c='k', marker='.')
 ax4020.axhline(ls='--', c='k')
 ax4021.axhline(ls='--', c='k')
 plt.setp(ax4020.get_xticklabels(), visible=False)
@@ -509,6 +512,9 @@ ax4020.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5))
 ax4120.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5))
 ax4021.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
 ax4121.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
+
+#ax4021.set_ylim([0.0, 0.35])
+#ax4121.set_ylim([0.0, 0.35])
 
 #ax400.set_ylabel(r'$k_y \rho_s$')
 #ax401.set_ylabel(r'$[c_s/a]$')
@@ -537,12 +543,13 @@ ax401.text(0.55, 0.07, r'$\gamma_{E}$')
 ax411.text(0.55, 0.23, r'$\gamma_{\mathrm{max}}$')
 ax411.text(0.6, 0.1, r'$\gamma_{E}$')
 
-ax4020.text(0.05, 0.75, r'$\omega_R$', transform=ax4020.transAxes)
+ax4020.text(0.05, 0.75, r'$\omega_R$ ($r/a=0.55$)', transform=ax4020.transAxes)
 ax4021.text(0.05, 0.75, r'$\gamma$', transform=ax4021.transAxes)
+ax4021.text(0.85, 0.28, r'$\gamma_E$', transform=ax4021.transAxes)
 
-ax4120.text(0.05, 0.75, r'$\omega_R$', transform=ax4120.transAxes)
+ax4120.text(0.05, 0.75, r'$\omega_R$ ($r/a=0.6$)', transform=ax4120.transAxes)
 ax4121.text(0.05, 0.75, r'$\gamma$', transform=ax4121.transAxes)
-
+ax4121.text(0.85, 0.28, r'$\gamma_E$', transform=ax4121.transAxes)
 
 
 plt.tight_layout()
@@ -550,7 +557,7 @@ plt.tight_layout()
 
 plt.savefig('fig_lin_cgyro.eps', format='eps', dpi=1200, facecolor='white')
 
-# %% Figure 5: Growth rates / real frequencies.
+# %% Plots of quasilinear weights
 # Note: The data here is generated from ~/hys2/plot_all_freqs.py
 
 fig5 = plt.figure(5, figsize=(3.375*2, 3.375*1.2))
@@ -598,7 +605,7 @@ def plotQlWeight(ax, ky, pflux, qeflux, qiflux, gamma, alpha):
     for i in range(flux_signchange.shape[0]):
         if flux_signchange[i]:
             ky_fs[j] = (ky[i+1]-ky[i]) * np.abs(pflux[i]/(pflux[i+1]-pflux[i])) + ky[i]
-    ax.scatter(ky_fs[0], 0, marker='*', c=(1.0, 0.5, 0.0), s=120, zorder=20, linewidth=0)
+    #ax.scatter(ky_fs[0], 0, marker='*', c=(1.0, 0.5, 0.0), s=120, zorder=20, linewidth=0)
 
 plotQlWeight(ax5[0,0], cgyro_data['ky'][0,:], cgyro_data['pflux'][0,1,:], cgyro_data['qeflux'][0,1,:], cgyro_data['qiflux'][0,1,:], cgyro_data['gamma'][0,1,:], 0.4)
 plotQlWeight(ax5[0,1], cgyro_data['ky'][0,:], cgyro_data['pflux'][0,3,:], cgyro_data['qeflux'][0,3,:], cgyro_data['qiflux'][0,3,:], cgyro_data['gamma'][0,3,:], 0.4)

@@ -1,7 +1,7 @@
 %!PS-Adobe-3.0 EPSF-3.0
 %%Title: fig_ql_cgyro.eps
 %%Creator: matplotlib version 1.5.1, http://matplotlib.org/
-%%CreationDate: Tue Dec 31 19:22:47 2019
+%%CreationDate: Thu Mar 19 13:49:39 2020
 %%Orientation: portrait
 %%BoundingBox: 63 250 549 541
 %%EndComments
@@ -25,6 +25,74 @@ box
 clip
 newpath
 } bind def
+%!PS-Adobe-3.0 Resource-Font
+%%Title: cmr10
+%%Copyright: Copyright (C) 1994, Basil K. Malyshev. All Rights Reserved.012BaKoMa Fonts Collection, Level-B.
+%%Creator: Converted from TrueType to type 3 by PPR
+25 dict begin
+/_d{bind def}bind def
+/_m{moveto}_d
+/_l{lineto}_d
+/_cl{closepath eofill}_d
+/_c{curveto}_d
+/_sc{7 -1 roll{setcachedevice}{pop pop pop pop pop pop}ifelse}_d
+/_e{exec}_d
+/FontName /Cmr10 def
+/PaintType 0 def
+/FontMatrix[.001 0 0 .001 0 0]def
+/FontBBox[-44 -250 1009 750]def
+/FontType 3 def
+/Encoding [ /Gamma ] def
+/FontInfo 10 dict dup begin
+/FamilyName (cmr10) def
+/FullName (cmr10) def
+/Notice (Copyright (C) 1994, Basil K. Malyshev. All Rights Reserved.012BaKoMa Fonts Collection, Level-B. ) def
+/Weight (Regular) def
+/Version (1.1/12-Nov-94) def
+/ItalicAngle 0.0 def
+/isFixedPitch false def
+/UnderlinePosition -133 def
+/UnderlineThickness 20 def
+end readonly def
+/CharStrings 1 dict dup begin
+/Gamma{625 0 31 0 582 683 _sc
+31 0 _m
+31 35 _l
+99 35 134 45 134 67 _c
+134 616 _l
+134 637 99 648 31 648 _c
+31 683 _l
+554 683 _l
+582 454 _l
+553 454 _l
+548 496 542 529 536 552 _c
+530 575 520 594 507 608 _c
+494 622 476 632 452 638 _c
+428 644 396 648 355 648 _c
+278 648 _l
+266 648 256 647 250 646 _c
+243 645 237 642 233 638 _c
+229 633 227 626 227 616 _c
+227 67 _l
+227 45 269 35 355 35 _c
+355 0 _l
+31 0 _l
+_cl}_d
+end readonly def
+
+/BuildGlyph
+ {exch begin
+ CharStrings exch
+ 2 copy known not{pop /.notdef}if
+ true 3 1 roll get exec
+ end}_d
+
+/BuildChar {
+ 1 index /Encoding get exch get
+ 1 index /BuildGlyph get exec
+}_d
+
+FontName currentdict end definefont pop
 %!PS-Adobe-3.0 Resource-Font
 %%Title: Bitstream Vera Sans
 %%Copyright: Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved.
@@ -781,74 +849,6 @@ _cl}_d
 732 272 _l
 106 272 _l
 106 355 _l
-_cl}_d
-end readonly def
-
-/BuildGlyph
- {exch begin
- CharStrings exch
- 2 copy known not{pop /.notdef}if
- true 3 1 roll get exec
- end}_d
-
-/BuildChar {
- 1 index /Encoding get exch get
- 1 index /BuildGlyph get exec
-}_d
-
-FontName currentdict end definefont pop
-%!PS-Adobe-3.0 Resource-Font
-%%Title: cmr10
-%%Copyright: Copyright (C) 1994, Basil K. Malyshev. All Rights Reserved.012BaKoMa Fonts Collection, Level-B.
-%%Creator: Converted from TrueType to type 3 by PPR
-25 dict begin
-/_d{bind def}bind def
-/_m{moveto}_d
-/_l{lineto}_d
-/_cl{closepath eofill}_d
-/_c{curveto}_d
-/_sc{7 -1 roll{setcachedevice}{pop pop pop pop pop pop}ifelse}_d
-/_e{exec}_d
-/FontName /Cmr10 def
-/PaintType 0 def
-/FontMatrix[.001 0 0 .001 0 0]def
-/FontBBox[-44 -250 1009 750]def
-/FontType 3 def
-/Encoding [ /Gamma ] def
-/FontInfo 10 dict dup begin
-/FamilyName (cmr10) def
-/FullName (cmr10) def
-/Notice (Copyright (C) 1994, Basil K. Malyshev. All Rights Reserved.012BaKoMa Fonts Collection, Level-B. ) def
-/Weight (Regular) def
-/Version (1.1/12-Nov-94) def
-/ItalicAngle 0.0 def
-/isFixedPitch false def
-/UnderlinePosition -133 def
-/UnderlineThickness 20 def
-end readonly def
-/CharStrings 1 dict dup begin
-/Gamma{625 0 31 0 582 683 _sc
-31 0 _m
-31 35 _l
-99 35 134 45 134 67 _c
-134 616 _l
-134 637 99 648 31 648 _c
-31 683 _l
-554 683 _l
-582 454 _l
-553 454 _l
-548 496 542 529 536 552 _c
-530 575 520 594 507 608 _c
-494 622 476 632 452 638 _c
-428 644 396 648 355 648 _c
-278 648 _l
-266 648 256 647 250 646 _c
-243 645 237 642 233 638 _c
-229 633 227 626 227 616 _c
-227 67 _l
-227 45 269 35 355 35 _c
-355 0 _l
-31 0 _l
 _cl}_d
 end readonly def
 
@@ -2745,22 +2745,6 @@ gsave
 31.528320 0.000000 m /five glyphshow
 grestore
 gsave
-99.87 101.8 53.33 166.8 clipbox
-79.190165 184.962701 m
-77.960452 181.178032 l
-73.981014 181.178032 l
-77.200447 178.838977 l
-75.970733 175.054307 l
-79.190165 177.393362 l
-82.409598 175.054307 l
-81.179884 178.838977 l
-84.399316 181.178032 l
-80.419879 181.178032 l
-cl
-1.000 0.500 0.000 setrgbcolor
-fill
-grestore
-gsave
 153.193333 166.75483 m
 253.061667 166.75483 l
 253.061667 268.6 l
@@ -4290,22 +4274,6 @@ gsave
 31.528320 0.000000 m /six glyphshow
 grestore
 gsave
-99.87 101.8 153.2 166.8 clipbox
-190.614758 184.962701 m
-189.385044 181.178032 l
-185.405607 181.178032 l
-188.625039 178.838977 l
-187.395326 175.054307 l
-190.614758 177.393362 l
-193.83419 175.054307 l
-192.604477 178.838977 l
-195.823909 181.178032 l
-191.844472 181.178032 l
-cl
-1.000 0.500 0.000 setrgbcolor
-fill
-grestore
-gsave
 253.061667 166.75483 m
 352.93 166.75483 l
 352.93 268.6 l
@@ -5833,22 +5801,6 @@ gsave
 21.987305 0.000000 m /zero glyphshow
 28.349609 0.000000 m /period glyphshow
 31.528320 0.000000 m /seven glyphshow
-grestore
-gsave
-99.87 101.8 253.1 166.8 clipbox
-297.232641 184.962701 m
-296.002927 181.178032 l
-292.02349 181.178032 l
-295.242922 178.838977 l
-294.013209 175.054307 l
-297.232641 177.393362 l
-300.452074 175.054307 l
-299.22236 178.838977 l
-302.441792 181.178032 l
-298.462355 181.178032 l
-cl
-1.000 0.500 0.000 setrgbcolor
-fill
 grestore
 gsave
 53.325 44.540625 m
@@ -7485,22 +7437,6 @@ gsave
 37.890625 0.000000 m /five glyphshow
 grestore
 gsave
-99.87 101.8 53.33 44.54 clipbox
-87.133324 62.748497 m
-85.90361 58.963827 l
-81.924173 58.963827 l
-85.143606 56.624773 l
-83.913892 52.840103 l
-87.133324 55.179157 l
-90.352757 52.840103 l
-89.123043 56.624773 l
-92.342475 58.963827 l
-88.363038 58.963827 l
-cl
-1.000 0.500 0.000 setrgbcolor
-fill
-grestore
-gsave
 153.193333 44.540625 m
 253.061667 44.540625 l
 253.061667 146.385795 l
@@ -9081,22 +9017,6 @@ gsave
 31.528320 0.000000 m /six glyphshow
 grestore
 gsave
-99.87 101.8 153.2 44.54 clipbox
-190.157966 62.748497 m
-188.928252 58.963827 l
-184.948815 58.963827 l
-188.168248 56.624773 l
-186.938534 52.840103 l
-190.157966 55.179157 l
-193.377399 52.840103 l
-192.147685 56.624773 l
-195.367117 58.963827 l
-191.38768 58.963827 l
-cl
-1.000 0.500 0.000 setrgbcolor
-fill
-grestore
-gsave
 253.061667 44.540625 m
 352.93 44.540625 l
 352.93 146.385795 l
@@ -10647,22 +10567,6 @@ gsave
 28.349609 0.000000 m /period glyphshow
 31.528320 0.000000 m /six glyphshow
 37.890625 0.000000 m /five glyphshow
-grestore
-gsave
-99.87 101.8 253.1 44.54 clipbox
-294.302322 62.748497 m
-293.072608 58.963827 l
-289.093171 58.963827 l
-292.312603 56.624773 l
-291.082889 52.840103 l
-294.302322 55.179157 l
-297.521754 52.840103 l
-296.29204 56.624773 l
-299.511473 58.963827 l
-295.532035 58.963827 l
-cl
-1.000 0.500 0.000 setrgbcolor
-fill
 grestore
 1.000 setlinewidth
 0 setlinejoin
