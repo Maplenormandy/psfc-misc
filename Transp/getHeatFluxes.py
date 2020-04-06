@@ -68,7 +68,7 @@ eVtoJ = 1.60218e-19 # Joules per eV
 
 neo_vnorm_raw = np.sqrt(tiNode.data() / mnorm) * c # vti in cm/s
 neo_fnorm_raw = neo_vnorm_raw * niNode.data() # 1/cm^2/s
-neo_qnorm_raw = neo_fnorm_raw * tiNode.data() * eVtoJ # 
+neo_qnorm_raw = neo_fnorm_raw * tiNode.data() * eVtoJ #
 
 teNode = ttree.getNode('\TRANSP::TOP.OUTPUTS.TWO_D:TE')
 neNode = ttree.getNode('\TRANSP::TOP.OUTPUTS.TWO_D:NE') # in cm^-3
@@ -164,6 +164,7 @@ plt.legend()
 
 # %%
 
+"""
 plt.figure()
 ax = plt.subplot(111)
 pos = np.array([2.5, 1.5, 0.5])
@@ -178,6 +179,7 @@ ax.spines['top'].set_visible(False)
 ax.yaxis.set_ticks_position('left')
 ax.xaxis.set_ticks_position('bottom')
 
+"""
 """
 ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
@@ -200,6 +202,8 @@ roa_safety = e.rmid2roa(rmid_safety, t0)
 shear = np.ediff1d(np.log(safety)) / np.ediff1d(np.log(roa_safety))
 roa_shear = (roa_safety[1:] + roa_safety[:-1])/2.0
 
-plt.figure()
+#plt.figure()
 
-plt.plot(roa_safety, safety)
+#plt.plot(roa_safety, safety)
+
+plt.show()

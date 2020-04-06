@@ -11,12 +11,12 @@ import matplotlib.pyplot as plt
 
 # %%
 
-data = scipy.io.netcdf.netcdf_file('/home/pablorf/Cao_transp/12345A05/12345A05.CDF')
+data = scipy.io.netcdf.netcdf_file('/home/normandy/hysteresis_transp/12345A05/12345A05.CDF')
 
 roa = data.variables['RMNMP'].data/21.878
 time = data.variables['TIME'].data
 
-tind = np.searchsorted(time, 1.43)
+tind = np.searchsorted(time, 1.25)
 
 volts = data.variables['V'].data
 
@@ -47,11 +47,20 @@ pcnve = data.variables['PCNVE'].data
 # %%
 
 plt.figure()
-plt.plot(roa[tind,:], pcond[tind,:]+pconv[tind,:], c='b')
-plt.plot(roa[tind,:], pcnde[tind,:]+pcnve[tind,:], c='g')
+#plt.plot(roa[tind,:], pcond[tind,:]+pconv[tind,:], c='b')
+#plt.plot(roa[tind,:], pcnde[tind,:]+pcnve[tind,:], c='g')
+plt.plot(roa[tind,:], ne[tind-1,:], c='b', ls='--')
+plt.plot(roa[tind,:], ne[tind,:], c='b')
+plt.plot(roa[tind,:], ne[tind+1,:], c='b', ls=':')
 
 # %%
 
 plt.figure()
+plt.plot(roa[tind,:], ti[tind-1,:], c='b', ls='--')
 plt.plot(roa[tind,:], ti[tind,:], c='b')
+plt.plot(roa[tind,:], ti[tind+1,:], c='b', ls=':')
+plt.plot(roa[tind,:], te[tind-1,:], c='g', ls='--')
 plt.plot(roa[tind,:], te[tind,:], c='g')
+plt.plot(roa[tind,:], te[tind+1,:], c='g', ls=':')
+
+plt.show()

@@ -17,6 +17,8 @@ import MDSplus
 
 import eqtools
 
+import matplotlib as mpl
+
 from skimage import measure
 
 # %%
@@ -58,7 +60,7 @@ class EquilibriumGeometry:
         
         self.calculate_ft()
         
-    def setup_flux_contours(self):
+    def setup_flux_contours(self, refineFactor=4):
         """
         Sets up the flux contours in RZ space on which to perform flux surface averaging.
         This is done by finding contours of the poloidal flux using skimage
@@ -67,22 +69,30 @@ class EquilibriumGeometry:
         
         self.npsi = len(e.getRmidPsi()[self.tind])
         self.psigrid = np.linspace(0, 1, self.npsi)
+        
         # This is the default psigrid to evaluate on
-        self.psigridEv = (self.psigrid[1:] + self.psigrid[:-1])/2.0
+        psigridRefine = np.linspace(0, 1, self.npsi * refineFactor)
+        self.psigridEv = (psigridRefine[1:] + psigridRefine[:-1])/2.0
+        self.dpsigridEv = np.diff(psigridRefine)
         
         # This is an array of numpy arrays of (R,Z) coordinates which poloidally
         # parameterize the flux surface. Note that the last point is not equal
         # to the first point, so if a closed contour is desired, the last point
         # must be repeated
-        self.psicontours = [None]*(self.npsi-1)
+        self.psicontours = [None]*(len(self.psigridEv))
+        
+        # rtheta is an array of numpy arrays (r,theta) which parameterizes the flux
+        # surface. nu gives the "straight field line" coordinate.
+        self.psicontours_rtheta = [None]*(len(self.psigridEv))
+        self.psicontours_nu = [None]*(len(self.psigridEv))
         
         # The following two are the length element (ds) and the flux surface
         # area element (ds/Bp) for each flux surface element given in psicontours.
         # Note that these are calculated as centered on the given R,Z coordinates.
-        self.psicontours_ds = [None]*(self.npsi-1)
+        self.psicontours_ds = [None]*(len(self.psigridEv))
         # Note an additional very important fact; Bp has been normalized such
         # that psi_axis = 0 and psi_LCFS = 1!!!
-        self.psicontours_dsbp = [None]*(self.npsi-1)
+        self.psicontours_dsbp = [None]*(len(self.psigridEv))
         
         rgrid = e.getRGrid()
         zgrid = e.getZGrid()
@@ -105,25 +115,26 @@ class EquilibriumGeometry:
         self.psinormfunc = scipy.interpolate.RectBivariateSpline(rgrid, zgrid, self.psinormRZ.T, kx=2, ky=2)
         
         # Set up an upscaled version of the poloidal flux, since the conour finder
-        # performs better on the upscaled version
-        rgrid_upscaled = np.linspace(rgrid[0], rgrid[-1], len(rgrid)*4)
+        # performs better on the upscaled version. Note that we flip it so that
+        # the break in the contours occurs on the high field side.
+        rgrid_upscaled = np.linspace(rgrid[0], rgrid[-1], len(rgrid)*4)[::-1]
         zgrid_upscaled = np.linspace(zgrid[0], zgrid[-1], len(zgrid)*8)
         rmesh, zmesh = np.meshgrid(rgrid_upscaled, zgrid_upscaled)
         
         rfunc = scipy.interpolate.interp1d(range(len(rgrid_upscaled)), rgrid_upscaled)
         zfunc = scipy.interpolate.interp1d(range(len(zgrid_upscaled)), zgrid_upscaled)
-        psinormRZ_upscaled = self.psinormfunc.ev(rmesh, zmesh)
+        psinormRZ_upscaled = self.psinormfunc.ev(rmesh, zmesh).T
         
         
         # Use skimage to get contours easily for us
-        for i in range(self.npsi-1):
+        for i in range(len(self.psigridEv)):
             contours = measure.find_contours(psinormRZ_upscaled, self.psigridEv[i])
             if len(contours) == 1:
-                self.psicontours[i] = np.array([rfunc(contours[0][:,1]), zfunc(contours[0][:,0])])
+                self.psicontours[i] = np.array([rfunc(contours[0][::-1,0]), zfunc(contours[0][::-1,1])])
             elif len(contours) > 1:
                 minDist = np.inf
                 for c in contours:
-                    rz = np.array([rfunc(c[:,1]), zfunc(c[:,0])])
+                    rz = np.array([rfunc(c[::-1,0]), zfunc(c[::-1,1])])
                     
                     if np.linalg.norm(np.mean(rz, axis=1) - self.magRZ) < minDist:
                         self.psicontours[i] = rz
@@ -133,12 +144,15 @@ class EquilibriumGeometry:
         
         if self.plotting:
             plt.figure()
+            
+        ffunc = scipy.interpolate.interp1d(self.psigrid, self.e.getF()[self.tind])
+        qfunc = scipy.interpolate.interp1d(self.psigrid, self.e.getQProfile()[self.tind])
         
         # Resample the contours such that the point spacings are of approximately equal arclength
-        for i in range(self.npsi-1):
+        for i in range(len(self.psigridEv)):
             cRZ = self.psicontours[i]
             
-            ctheta = np.unwrap(np.arctan2(cRZ[1] - self.magZ, cRZ[0] - self.magR))
+            ctheta = np.unwrap(np.arctan2(cRZ[1] - self.magZ, cRZ[0] - self.magR))-2*np.pi
             cr = np.linalg.norm(cRZ - self.magRZ[:,np.newaxis], axis=0)
             
             dtheta = np.unwrap(np.diff(ctheta))
@@ -166,26 +180,44 @@ class EquilibriumGeometry:
             
             resampled_cRZ = np.array([np.cos(ctheta2), np.sin(ctheta2)]*cr2[np.newaxis,:]) + self.magRZ[:,np.newaxis]
             
-            if self.plotting:
-                plt.plot(resampled_cRZ[0,:], resampled_cRZ[1,:], marker='.')
+            
             
             self.psicontours[i] = resampled_cRZ
             self.psicontours_ds[i] = ds2
+            self.psicontours_rtheta[i] = np.array([cr2, ctheta2])
             
             # This equation is abs(del(psi) cross del(toroidal angle))
             br_norm = -self.psinormfunc.ev(resampled_cRZ[0,:], resampled_cRZ[1,:], dy=1)
             bz_norm = self.psinormfunc.ev(resampled_cRZ[0,:], resampled_cRZ[1,:], dx=1)
             bp_norm = np.sqrt(br_norm**2 + bz_norm**2)/resampled_cRZ[0,:]
             self.psicontours_dsbp[i] = ds2/bp_norm
+
+            # Equation (2.9) from the GYRO technical manual
+            f = ffunc(self.psigridEv[i])
+            q = qfunc(self.psigridEv[i])
+            # This is calculating q*eta, where eta is the straight field line coordinate 
+            self.psicontours_nu[i] = -f * np.cumsum(ds2 / bp_norm / resampled_cRZ[0,:]**2) / self.psiRange
             
+            # Align it such that theta=0 gives nu=0
+            nuFunc = scipy.interpolate.interp1d(ctheta2, self.psicontours_nu[i], kind='quadratic')
+            self.psicontours_nu[i] = self.psicontours_nu[i] - nuFunc(0)
+
+            if self.plotting:
+                plt.scatter(resampled_cRZ[0,:], resampled_cRZ[1,:], c=self.psicontours_nu[i]/2/np.pi/q, marker='o', cmap='PiYG', edgecolors='none')
+                #plt.scatter(resampled_cRZ[0,:], resampled_cRZ[1,:], c=self.psicontours_rtheta[i][1:]/2/np.pi, marker='o', cmap='PiYG', edgecolors='none')
+                
+        if self.plotting:
+            plt.colorbar()
+            plt.axis('equal')
+    
     def fs_integrate(self, f):
         """
         Takes in a function of (R,Z,psi) and returns an array of the flux-surface
         integrated function evaluated at psinormEv (e.g. calculating int[f(R,Z,psi(R,Z)) ds/Bp])
         """
-        results = np.zeros((self.npsi-1))
+        results = np.zeros(len(self.psigridEv))
         
-        for i in range(self.npsi-1):
+        for i in range(len(self.psigridEv)):
             results[i] = np.sum(f(self.psicontours[i][0,:], self.psicontours[i][1,:], self.psigridEv[i])*self.psicontours_dsbp[i])
         
         return results
@@ -193,7 +225,7 @@ class EquilibriumGeometry:
     
     def fs_average(self, f):
         return self.fs_integrate(f)/self.fs_vprime*2*np.pi
-        
+    
     def calculate_ft(self):
         """
         Calculates the trapped particle fraction using Lin-Liu and Miller PoP 1995
@@ -235,7 +267,7 @@ class EquilibriumGeometry:
         om = 0.75
         self.fs_ft = om*fs_ftu + (1-om)*fs_ftl
     
-    def calculate_zeff_neo(self, ne_fit, te_fit, ti_fit, ft_method='lin-liu95'):
+    def calculate_zeff_neo(self, ne_fit, te_fit, ti_fit, ft_method='lin-liu95', return_funcs=False):
         """
         Estimates the Zeff by matching the neoclassical current to the measured current
         """
@@ -287,12 +319,16 @@ class EquilibriumGeometry:
         s = np.polynomial.polynomial.Polynomial.fit(ipNode.dim_of().data()[ip_t0:ip_t1], ipNode.data()[ip_t0:ip_t1], 1)
         
         ip = s.convert().coef[0]
+        #ip_std = np.std(ipNode.data()[ip_t0:ip_t1])
         dip_dt = s.convert().coef[1]
         
         v_inductive = dip_dt * e.getLi()[self.tind] * 2 * np.pi * self.magR * 1e-7
+        #print e.getLi()[self.tind]
         
         # For the time being, ignore the inductive voltage
         fsa_vloop = (self.fs_average(lambda R,Z,psi: vloop_func(R,Z, grid=False)) - v_inductive)
+        avg_vloop = np.sum(fsa_vloop*self.fs_vprime*self.dpsigridEv)/np.sum(self.fs_vprime*self.dpsigridEv)
+        fsa_vloop = np.ones(fsa_vloop.shape)*avg_vloop
         fsa_ellb = fs_f * fsa_vloop * fsa_r_2 / 2 / np.pi
         
         #print fsa_r_2
@@ -313,7 +349,7 @@ class EquilibriumGeometry:
         fsa_ne = ne_func(self.psigridEv)*1e20 # density in m^-3
         fsa_te = te_func(self.psigridEv)*1e3 # temperature in eV
         fsa_ti = ti_func(self.psigridEv)*1e3 # temperature in eV
-        fsa_dne = dne_func(self.psigridEv)*1e19*droa_dpsi
+        fsa_dne = dne_func(self.psigridEv)*1e20*droa_dpsi
         fsa_dte = dte_func(self.psigridEv)*1e3*droa_dpsi
         fsa_dti = dti_func(self.psigridEv)*1e3*droa_dpsi
         
@@ -322,10 +358,6 @@ class EquilibriumGeometry:
         
         ev2J = 1.60218e-19
         
-        fsa_p = fsa_ne * (fsa_te + fsa_ti) * ev2J
-        fsa_pe = fsa_ne * (fsa_te) * ev2J
-        fsa_dp = (fsa_ne * (fsa_dte + fsa_dti) + fsa_dne * (fsa_te + fsa_ti)) * ev2J
-        
         #fs_ft = np.sqrt(2*fs_eps)
         if ft_method == 'lin-liu95':
             fs_ft = self.fs_ft
@@ -333,18 +365,34 @@ class EquilibriumGeometry:
             fs_ft = np.sqrt(2*fs_eps)
         elif ft_method == 'mlreinke':
             fs_ft = np.sqrt(fs_eps)
+
+        fs_ft_used = fs_ft            
         
-        def jllb_func(z, verbose=False):
+        def jllb_func(z, te_unc=1.0, verbose=False, test_vars={}):
+            fs_ft = fs_ft_used
+            fsa_p = (fsa_ne * (fsa_te*te_unc) + fsa_ne / z * fsa_ti) * ev2J
+            fsa_pe = fsa_ne * ((fsa_te*te_unc)) * ev2J
+            fsa_dp = (fsa_ne * (fsa_dte + fsa_dti / z) + fsa_dne * ((fsa_te*te_unc) + fsa_ti / z)) * ev2J
+        
             # Equation 18d,e
-            lnLe = 31.3 - np.log(np.sqrt(fsa_ne) / fsa_te)
-            lnLi = 30 - np.log(z**3 * np.sqrt(fsa_ne) / fsa_ti**1.5)
+            lnLe = 31.3 - np.log(np.sqrt(fsa_ne) / (fsa_te*te_unc))
+            lnLi = 30 - np.log(z**3 * np.sqrt(fsa_ne/z) / fsa_ti**1.5)
             
+            if 'lnLe' in test_vars:
+                lnLe = test_vars['lnLe']
+                
             # Equsation 18a
             nz = 0.58 + 0.74 / (0.76 + z)
-            sig_spitzer = 1.9012e4 * fsa_te**1.5 / z / nz / lnLe
+            sig_spitzer = 1.9012e4 * (fsa_te*te_unc)**1.5 / z / nz / lnLe
             
-            nustare = 6.921e-18 * fs_q * self.magR * fsa_ne * z * lnLe / fsa_te**2 / fs_eps**1.5
-            nustari = 4.90e-18 * fs_q * self.magR * fsa_ne * z**4 * lnLi / fsa_ti**2 / fs_eps**1.5
+            if 'sig_spitzer' in test_vars:
+                sig_spitzer = test_vars['sig_spitzer']
+            if 'ft' in test_vars:
+                fs_ft = test_vars['ft']
+            
+            
+            nustare = 6.921e-18 * fs_q * self.magR * fsa_ne * z * lnLe / (fsa_te*te_unc)**2 / fs_eps**1.5
+            nustari = 4.90e-18 * fs_q * self.magR * (fsa_ne/z) * z**4 * lnLi / fsa_ti**2 / fs_eps**1.5
             
             #print sig_spitzer
         
@@ -373,57 +421,37 @@ class EquilibriumGeometry:
             alpha0 = -1.17*(1-fs_ft)/(1-0.22*fs_ft-0.19*fs_ft**2)
             alpha = ((alpha0 + 0.25*(1-fs_ft**2)*np.sqrt(nustari)) / (1 + 0.5*np.sqrt(nustari)) - 0.315*nustari**2*fs_ft**6) / (1 + 0.15*nustari**2*fs_ft**6)
             
-            j_bs = -fs_f * fsa_pe * (l31 * fsa_p/fsa_pe * fsa_dp/fsa_p + l32 * fsa_dte/fsa_te + l34 * alpha * fsa_dti/fsa_ti)
-            #j_bs = 0
+            j_bs = -fs_f * fsa_pe * (l31 * fsa_p/fsa_pe * fsa_dp/fsa_p + l32 * fsa_dte/(fsa_te*te_unc) + l34 * alpha * fsa_dti/fsa_ti)
             
-            #print z, nustare
-            
-            #print j_bs*1e-6
-            #print z,sig_neo
             
             if verbose:
                 print 'max f33_teff', np.max(f33_teff)
                 print 'min nustare', np.min(nustare)
                 print 'r/a min', roa_func(self.psigridEv[np.argmin(nustare)])
             
-            return -(sig_neo*fsa_ellb + j_bs)
+            test_vars['sig_neo'] = sig_neo            
+            
+            return -(sig_neo*fsa_ellb*1.07 + j_bs)
+            
         
-        def ip_func(z):
-            fsa_jllb = jllb_func(z)
+        def ip_func(z, te_unc=1.0, verbose=False, test_vars={}):
+            fsa_dp = (fsa_ne * (fsa_dte + fsa_dti / z) + fsa_dne * ((fsa_te*te_unc) + fsa_ti / z)) * ev2J
+            
+            fsa_jllb = jllb_func(z, te_unc, verbose, test_vars=test_vars)
             fs_k = fsa_jllb / fsa_b2 - fsa_dp * fs_f / fsa_b2
         
             fsa_jt = (fsa_dp + fs_k * fs_f * fsa_r_2)
             fsa_jt = (fsa_dp + fs_k * fs_f * fsa_r_2)
             
-            return np.sum(fsa_jt*self.fs_vprime*np.diff(self.psigrid) / 2 / np.pi)
+            if (verbose):
+                pass
+                #print fsa_jt*self.fs_vprime*self.dpsigridEv / 2 / np.pi
             
-        z_best = scipy.optimize.ridder(lambda z: ip_func(z) - ip, 0.2, 10.0)
-        jllb_func(z_best, verbose=True)
+            return np.sum(fsa_jt*self.fs_vprime*self.dpsigridEv / 2 / np.pi)
         
-        return z_best
-
-# %%
-
-"""
-import cPickle as pkl
-
-shot=1120216017
-result = pkl.load(open('/home/normandy/git/psfc-misc/Fitting/result_%d.pkl'%shot, 'r'))
-
-zeffs = np.zeros(len(result['time']))
-
-for i in range(len(result['time'])):
-    eg = EquilibriumGeometry(shot, (result['time'][i]-0.03, result['time'][i]+0.03))
-    ne_fit = result['ne_fits'][i]
-    te_fit = result['te_fits'][i]
-    ti_fit = result['ti_fits'][i]
-    zeffs[i] = str(eg.calculate_zeff_neo(ne_fit, te_fit, ti_fit, ft_method='lin-liu95'))
-    print result['time'][i], 'zeff = '+str(zeffs[i])
-
-# %%
-
-plt.plot(result['time'], zeffs, marker='.')
-plt.axvline(0.8, ls='--', c='b')
-plt.axvline(1.1, ls='--', c='b')
-plt.axvline(1.3, ls='--', c='b')
-"""
+        if return_funcs:
+            return (ip_func, roa_func)
+        else:
+            z_best = scipy.optimize.ridder(lambda z: ip_func(z) - ip, 0.2, 20.0)
+            ip_func(z_best, verbose=True)
+            return z_best

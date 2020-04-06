@@ -11,7 +11,7 @@ The expected sequence to get data, fit profiles and save them is:
 - run get_ne_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst)
 - run get_te_fit(shot=shot, t_min=t_min,t_max=t_max, plot=True, noise_opt=False, dst=dst)
 - run get_ti_fit(shot=shot,t_min=t_min,t_max=t_max,THT=THT,merge_point=merge_point,plot=True,noise_opt=False,dst=dst)
-- run get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst)
+- run get_omegator_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst)
 - To shift profiles such that the temperature at the LCFS is ~75 eV, also
   run shift_profiles(shot=shot, dst=dst, merge_point = merge_point)
 
@@ -719,7 +719,7 @@ def get_ti_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, merge_point= merge_po
 
 
 def overplot_te_ti(shot=shot,dst=dst):
-    with open(dst+'/vtor_%d_FS.pkl'%shot, 'rb') as f:
+    with open(dst+'/omegator_%d_FS.pkl'%shot, 'rb') as f:
         ti=pkl.load(f)
     with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
         te=pkl.load(f)
@@ -731,10 +731,10 @@ def overplot_te_ti(shot=shot,dst=dst):
 
 
 
-def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst, x0_mean=0.45):
+def get_omegator_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst, x0_mean=0.45):
     global lastShot, e
     ''' Obtain toroidal rotation frequency from saved THACO data.
-    Note that this requires Norman to have already saved an omega_tor BS fit in THACO.
+    Note that this requires Norman to have already saved an ftor BS fit in THACO.
 
     NOT YET UPDATED TO USE PYTHON DICTIONARIES
     '''
@@ -744,10 +744,10 @@ def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst,
         lastShot= shot
 
     if shot==1101014029:
-        # in this shot, Ar was burnt in the core. A merged profile of omega_tor was obtained by combining
+        # in this shot, Ar was burnt in the core. A merged profile of ftor was obtained by combining
         # Ar and Ca-injection data -- likely not to high accuracy
-        with open('/home/sciortino/fits/omega_tor_fit_%d_bmix.pkl'%shot,'rb') as f:
-            vtor_x, omegator_y, omegator_err_y, (t_min_fit,t_max_fit) = pkl.load(f)
+        with open('/home/sciortino/fits/ftor_fit_%d_bmix.pkl'%shot,'rb') as f:
+            omegator_x, ftor_y, ftor_err_y, (t_min_fit,t_max_fit) = pkl.load(f)
 
     elif shot==1101014030:
         raise ValueError("FS: this shot had burnt Ar. Better to use the fit from repeat-shot 1101014029")
@@ -767,19 +767,19 @@ def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst,
             branchnode =  specTree.getNode(rootPath+'.HLIKE.PROFILES.LYA1')
             data = ThacoData(branchnode)
 
-        vtor_x = e.rho2rho('psinorm', 'r/a', data.rho, (t_min+t_max)/2.0)
+        omegator_x = e.rho2rho('psinorm', 'r/a', data.rho, (t_min+t_max)/2.0)
 
         # time range of interest
         tt1, tt2 = np.searchsorted(data.time, (t_min, t_max))
 
-        omegator_y = np.mean(data.pro[1,tt1:tt2,:],axis=0)
+        ftor_y = np.mean(data.pro[1,tt1:tt2,:],axis=0)
         # use LoTV for uncertainties
-        omegator_err_y = np.sqrt(np.var(data.pro[1,tt1:tt2,:],axis=0) + np.mean(data.perr[1, tt1:tt2,:]**2,axis=0))
+        ftor_err_y = np.sqrt(np.var(data.pro[1,tt1:tt2,:],axis=0) + np.mean(data.perr[1, tt1:tt2,:]**2,axis=0))
 
-    # Change omega_tor into vtor
-    Rmaj = e.rho2rho('r/a', 'Rmid', vtor_x, (t_min+t_max)/2.0)
-    y = 2 * np.pi * omegator_y
-    err_y = 2 * np.pi * omegator_err_y
+    # Change ftor into omega_tor
+    #Rmaj = e.rho2rho('r/a', 'Rmid', omegator_x, (t_min+t_max)/2.0)
+    y = 2 * np.pi * ftor_y
+    err_y = 2 * np.pi * ftor_err_y
 
     # eliminate obvious outliers
     y[err_y>50.0] = np.nan
@@ -795,9 +795,9 @@ def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst,
             }
     gibbs_params['x0_mean'] = x0_mean
 
-    res = profile_fit_fs(vtor_x, y, err_y=err_y, optimize=True, grid=xgrid, compute_gradients=True,
+    res = profile_fit_fs(omegator_x, y, err_y=err_y, optimize=True, grid=xgrid, compute_gradients=True,
                          kernel='gibbs', noiseLevel=1.0,debug_plots=plot, use_MCMC=use_MCMC, **gibbs_params)
-    #res = profile_fitting(vtor_x, y, err_y, optimize=True, method='GPR', kernel='SE', noise_level=2.0)
+    #res = profile_fitting(omegator_x, y, err_y, optimize=True, method='GPR', kernel='SE', noise_level=2.0)
     print res.free_params
     print res.free_param_names
     y=res.m_gp
@@ -806,66 +806,66 @@ def get_vtor_fit(shot=shot,t_min=t_min,t_max=t_max, THT=THT, plot=True, dst=dst,
 
 
     if save_as_dict:
-        vtor={};
-        vtor['X']=res.grid
-        vtor['y'] = res.m_gp
-        vtor['err_y']=res.s_gp
-        vtor['dy_dX'] = res.gm_gp
-        vtor['err_dy_dX']=res.gs_gp
-        vtor['a_Ly']=np.abs(res.gm_gp/res.m_gp)
-        #vtor['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
-        vtor['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #vtor['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        vtor['time'] = (t_min+t_max)/2.0
+        omegator={};
+        omegator['X']=res.grid
+        omegator['y'] = res.m_gp
+        omegator['err_y']=res.s_gp
+        omegator['dy_dX'] = res.gm_gp
+        omegator['err_dy_dX']=res.gs_gp
+        omegator['a_Ly']=np.abs(res.gm_gp/res.m_gp)
+        #omegator['a_Ly']=np.abs(a0*res.gm_gp/res.m_gp)
+        omegator['err_a_Ly']=(1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #omegator['err_a_Ly']=(a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        omegator['time'] = (t_min+t_max)/2.0
 
         if dst!=None:
             with open(dst+'/ne_dict_fit_%d.pkl'%shot,'wb') as f:
-                pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
+                pkl.dump(omegator, f, protocol=pkl.HIGHEST_PROTOCOL)
             print 'saved file ' +dst+'/ne_dict_fit_%d.pkl'%shot
 
     else:
-        vtor = prof_object()
+        omegator = prof_object()
 
         # save fitted profile:
-        vtor.x = res.grid
-        vtor.y = res.m_gp
-        vtor.err_y = res.s_gp
-        vtor.dy_dx = res.gm_gp
-        vtor.err_dy_dx = res.gs_gp
-        vtor.a_Ly = np.abs(res.gm_gp/res.m_gp)
-        #vtor.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
-        vtor.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        #vtor.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
-        vtor.time = (t_min+t_max)/2.0
+        omegator.x = res.grid
+        omegator.y = res.m_gp
+        omegator.err_y = res.s_gp
+        omegator.dy_dx = res.gm_gp
+        omegator.err_dy_dx = res.gs_gp
+        omegator.a_Ly = np.abs(res.gm_gp/res.m_gp)
+        #omegator.a_Ly = np.abs(a0*res.gm_gp/res.m_gp)
+        omegator.err_a_Ly = (1./res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        #omegator.err_a_Ly = (a0/res.m_gp)*np.sqrt((res.gm_gp/res.m_gp)**2 * res.s_gp**2 + res.gs_gp**2/res.m_gp**2)
+        omegator.time = (t_min+t_max)/2.0
 
         if dst!=None:
-            with open(dst+'/vtor_%d_FS.pkl'%shot,'wb') as f:
-                pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
-            print 'saved file ' +dst+'/vtor_%d_FS.pkl'%shot
+            with open(dst+'/omegator_%d_FS.pkl'%shot,'wb') as f:
+                pkl.dump(omegator, f, protocol=pkl.HIGHEST_PROTOCOL)
+            print 'saved file ' +dst+'/omegator_%d_FS.pkl'%shot
 
     if dst!=None:
-        with open(dst+'/vtor_prof_%d_FS.pkl'%shot,'wb') as f:
-            pkl.dump(vtor, f, protocol=pkl.HIGHEST_PROTOCOL)
-        print 'saved file ' +dst+'/vtor_prof_%d_FS.pkl'%shot
+        with open(dst+'/omegator_prof_%d_FS.pkl'%shot,'wb') as f:
+            pkl.dump(omegator, f, protocol=pkl.HIGHEST_PROTOCOL)
+        print 'saved file ' +dst+'/omegator_prof_%d_FS.pkl'%shot
 
 
 
     if plot:
         plt.figure()
         if not save_as_dict:
-            plt.errorbar(vtor.x, vtor.dy_dx, vtor.err_dy_dx, fmt='*')
+            plt.errorbar(omegator.x, omegator.dy_dx, omegator.err_dy_dx, fmt='*')
         else:
-            plt.errorbar(vtor['X'], vtor['dy_dX'], vtor['err_dy_dX'], fmt='*')
-        plt.xlabel('r/a'); plt.ylabel('dvtor/dx')
+            plt.errorbar(omegator['X'], omegator['dy_dX'], omegator['err_dy_dX'], fmt='*')
+        plt.xlabel('r/a'); plt.ylabel('domegator/dx')
 
 
-    return vtor
+    return omegator
 
 
 
 
 def overplot_te_ti_shifted(shot=shot,dst=dst):
-    with open(dst+'/vtor_%d_FS_shifted.pkl'%shot, 'rb') as f:
+    with open(dst+'/omegator_%d_FS_shifted.pkl'%shot, 'rb') as f:
         ti=pkl.load(f)
     with open(dst+'/te_prof_%d_FS_shifted.pkl'%shot, 'rb') as f:
         te=pkl.load(f)
@@ -894,31 +894,31 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
         if shift_hirexdata_as_well:
             with open(dst+'/ti_dict_fit_%d.pkl'%shot, 'rb') as f:
                 ti=pkl.load(f)
-            with open(dst+'/vtor_dict_fit_%d.pkl'%shot, 'rb') as f:
-                vtor=pkl.load(f)
+            with open(dst+'/omegator_dict_fit_%d.pkl'%shot, 'rb') as f:
+                omegator=pkl.load(f)
     else:
         with open(dst+'/te_prof_%d_FS.pkl'%shot, 'rb') as f:
             te=pkl.load(f)
-        with open(dst+'/vtor_%d_FS.pkl'%shot, 'rb') as f:
+        with open(dst+'/omegator_%d_FS.pkl'%shot, 'rb') as f:
             ne=pkl.load(f)
 
         if shift_hirexdata_as_well:
-            with open(dst+'/vtor_%d_FS.pkl'%shot, 'rb') as f:
+            with open(dst+'/omegator_%d_FS.pkl'%shot, 'rb') as f:
                 ti=pkl.load(f)
-            with open(dst+'/vtor_prof_%d_FS.pkl'%shot, 'rb') as f:
-                vtor=pkl.load(f)
+            with open(dst+'/omegator_prof_%d_FS.pkl'%shot, 'rb') as f:
+                omegator=pkl.load(f)
 
     try:   #or if not save_as_dict
         te_x = te.x; ne_x = ne.x;
-        if shift_hirexdata_as_well: ti_x = ti.x; vtor_x = vtor.x
+        if shift_hirexdata_as_well: ti_x = ti.x; omegator_x = omegator.x
         te_y = te.y; ne_y = ne.y;
-        if shift_hirexdata_as_well: ti_y = ti.y; vtor_y = vtor.y
+        if shift_hirexdata_as_well: ti_y = ti.y; omegator_y = omegator.y
         te_err_y = te.err_y; ne_err_y = ne.err_y;
-        if shift_hirexdata_as_well: ti_err_y = ti.err_y; vtor_err_y = vtor.err_y
+        if shift_hirexdata_as_well: ti_err_y = ti.err_y; omegator_err_y = omegator.err_y
     except:
         # use dictionaries
         te_x = te['X']; ne_x = ne['X'];
-        if shift_hirexdata_as_well: ti_x = ti['X']; vtor_x = vtor['X']
+        if shift_hirexdata_as_well: ti_x = ti['X']; omegator_x = omegator['X']
 
         '''# if using new dictionary form, shift all fields (includes gradients)
         for key in te.keys():
@@ -926,9 +926,9 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
                 eval('te_'+key+'= te['+key+']')
         '''
         te_y = te['y']; ne_y = ne['y'];
-        if shift_hirexdata_as_well: ti_y = ti['y']; vtor_y = vtor['y']
+        if shift_hirexdata_as_well: ti_y = ti['y']; omegator_y = omegator['y']
         te_err_y = te['err_y']; ne_err_y = ne['err_y'];
-        if shift_hirexdata_as_well: ti_err_y = ti['err_y']; vtor_err_y = vtor['err_y']
+        if shift_hirexdata_as_well: ti_err_y = ti['err_y']; omegator_err_y = omegator['err_y']
 
     # te_y should probably be interpolated on a denser grid first
     x_dense=np.linspace(te_x.min(),te_x.max(), 1000)
@@ -956,39 +956,39 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
         ti_err_y = ti_err_y[ti_x>0]
         ti_x = ti_x[ti_x>0]  # redefinition
 
-        vtor_x = vtor_x - shift
-        vtor_y = vtor_y[vtor_x>0]
-        vtor_err_y = vtor_err_y[vtor_x>0]
-        vtor_x = vtor_x[vtor_x>0]  # redefinition
+        omegator_x = omegator_x - shift
+        omegator_y = omegator_y[omegator_x>0]
+        omegator_err_y = omegator_err_y[omegator_x>0]
+        omegator_x = omegator_x[omegator_x>0]  # redefinition
 
     # Ensure that first radial point is 0 (accuracy not significantly reduced, but interpolation may also be done...)
     te_x[0] = 0.0; ne_x[0] = 0.0;
-    if shift_hirexdata_as_well: ti_x[0] = 0.0; vtor_x[0]=0.0
+    if shift_hirexdata_as_well: ti_x[0] = 0.0; omegator_x[0]=0.0
 
     if save_as_dict:
         te_prof={}
         te_prof['X']=te_x; te_prof['y'] = te_y; te_prof['err_y'] = te_err_y; te_prof['time'] = te['time']
 
-        vtor={}
-        vtor['X']=ne_x; vtor['y'] = ne_y; vtor['err_y'] = ne_err_y; vtor['time'] = ne['time']
+        omegator={}
+        omegator['X']=ne_x; omegator['y'] = ne_y; omegator['err_y'] = ne_err_y; omegator['time'] = ne['time']
 
         # save dictionaries
         with open(dst+'/te_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
             pkl.dump(te_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
         with open(dst+'/ne_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-            pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
+            pkl.dump(omegator,f,protocol=pkl.HIGHEST_PROTOCOL)
 
         if shift_hirexdata_as_well:
-            vtor={}
-            vtor['X']=ti_x; vtor['y'] = ti_y; vtor['err_y'] = ti_err_y; vtor['time'] = ti['time']
+            omegator={}
+            omegator['X']=ti_x; omegator['y'] = ti_y; omegator['err_y'] = ti_err_y; omegator['time'] = ti['time']
 
-            vtor_prof={}
-            vtor_prof['X']=vtor_x; vtor_prof['y'] = vtor_y; vtor_prof['err_y'] = vtor_err_y; vtor_prof['time'] = vtor['time']
+            omegator_prof={}
+            omegator_prof['X']=omegator_x; omegator_prof['y'] = omegator_y; omegator_prof['err_y'] = omegator_err_y; omegator_prof['time'] = omegator['time']
 
             with open(dst+'/ti_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-                pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
-            with open(dst+'/vtor_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
-                pkl.dump(vtor_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
+                pkl.dump(omegator,f,protocol=pkl.HIGHEST_PROTOCOL)
+            with open(dst+'/omegator_dict_fit_%d_shifted.pkl'%shot, 'wb') as f:
+                pkl.dump(omegator_prof,f,protocol=pkl.HIGHEST_PROTOCOL)
 
 
     else:
@@ -998,7 +998,7 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
 
         if shift_hirexdata_as_well:
             ti = prof_object(**{'x':ti_x,'y':ti_y,'err_y':ti_err_y, 'time': ti.time})
-            vtor = prof_object(**{'x':vtor_x,'y':vtor_y,'err_y':vtor_err_y, 'time': vtor.time})
+            omegator = prof_object(**{'x':omegator_x,'y':omegator_y,'err_y':omegator_err_y, 'time': omegator.time})
 
 
         # plotting currently only for non-dict case...
@@ -1015,19 +1015,19 @@ def shift_profiles(shot=shot, dst=dst, merge_point = merge_point, shift_hirexdat
 
         with open(dst+'/te_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
             pkl.dump(te,f,protocol=pkl.HIGHEST_PROTOCOL)
-        with open(dst+'/vtor_%d_FS_shifted.pkl'%shot, 'wb') as f:
+        with open(dst+'/omegator_%d_FS_shifted.pkl'%shot, 'wb') as f:
             pkl.dump(ne,f,protocol=pkl.HIGHEST_PROTOCOL)
 
         if shift_hirexdata_as_well:
             plt.figure()
-            plt.errorbar(vtor.x,vtor.y, vtor.err_y, fmt='o-', color ='purple')
+            plt.errorbar(omegator.x,omegator.y, omegator.err_y, fmt='o-', color ='purple')
             plt.xlabel('r/a', fontsize=18); plt.ylabel(r'$v_{tor}$ [m/s]', fontsize=18)
 
-            with open(dst+'/vtor_%d_FS_shifted.pkl'%shot, 'wb') as f:
+            with open(dst+'/omegator_%d_FS_shifted.pkl'%shot, 'wb') as f:
                 pkl.dump(ti,f,protocol=pkl.HIGHEST_PROTOCOL)
 
-            with open(dst+'/vtor_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
-                pkl.dump(vtor,f,protocol=pkl.HIGHEST_PROTOCOL)
+            with open(dst+'/omegator_prof_%d_FS_shifted.pkl'%shot, 'wb') as f:
+                pkl.dump(omegator,f,protocol=pkl.HIGHEST_PROTOCOL)
 
         print "Shifted profiles and saved them in " + dst
 
