@@ -28,14 +28,20 @@ nl04data = fig1_1['nl04data']
 vtime = fig1_1['vtime']
 vdata = fig1_1['vdata']
 
-fig1 = plt.figure(1, figsize=(3.375*1.5, 3.375*1.1*1.5))
+
+fig2da = np.load('figure2_aps.npz')
+
+fig1 = plt.figure(1, figsize=(3.375*1.5, 3.375*1.2*1.5))
 gs1 = mpl.gridspec.GridSpec(2, 1, height_ratios=[2,1])
 gs1_inner = mpl.gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs1[0], hspace=0.0)
 
 ax10 = plt.subplot(gs1_inner[0])
 #ax10.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
 #ax10.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
-ax10.plot(nl04time, nl04data/1e20/0.6, c='k')
+#ax10.plot(nl04time, nl04data/1e20/0.6, c='k')
+ax10.plot(fig2da['hys01'][2,:], fig2da['hys01'][0,:], c='k')
+ax10.plot(fig2da['hys02'][2,:], fig2da['hys02'][0,:], c='m')
+ax10.plot(fig2da['hys03'][2,:], fig2da['hys03'][0,:], c='c')
 ax10.yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.1))
 ax10.set_ylabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
 ax10.set_ylim([0.68,1.02])
@@ -48,16 +54,16 @@ ax11 = plt.subplot(gs1_inner[1], sharex=ax10)
 #ax11.axvspan(0.57, 0.63, color=(0.5,0.5,1.0))
 #ax11.axvspan(0.93, 0.99, color=(1.0,0.5,0.5))
 #ax11.plot(vtime, vdata+offset, c='k', marker='.')
-ax11.plot(vtime[:72], fig2d['hys01'][1,:], c='k', marker='.')
-ax11.plot(vtime[:72], fig2d['hys02'][1,:], c='m', marker='.')
-ax11.plot(vtime[:72], fig2d['hys03'][1,:], c='c', marker='.')
+ax11.plot(fig2da['hys01'][2,:], fig2da['hys01'][1,:], c='k', marker='.')
+ax11.plot(fig2da['hys02'][2,:], fig2da['hys02'][1,:], c='m', marker='.')
+ax11.plot(fig2da['hys03'][2,:], fig2da['hys03'][1,:], c='c', marker='.')
 ax11.axhline(c='k', ls='--')
 ax11.yaxis.set_major_locator(mpl.ticker.FixedLocator([-10,0,10]))
 ax11.set_ylabel('$v_{tor}$ (km/s)')
 ax11.set_xlabel('time (sec)')
-ax11.set_xlim([0.5, 1.5])
+ax11.set_xlim([0.5, 1.45])
 
-ax11.text(0.99, 0.96, '1160506007', transform=ax11.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6})
+#ax11.text(0.99, 0.96, '1160506007', transform=ax11.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6})
 
 fig12 = np.load('figure1_2.npz')
 
@@ -91,8 +97,8 @@ fig2 = plt.figure(2, figsize=(3.375*1.5, 3.375*1.5*0.75))
 fig2d = np.load('figure2.npz')
 
 plt.plot(fig2d['hys01'][0,:], fig2d['hys01'][1,:], marker='.', c='k')
-plt.plot(fig2d['hys02'][0,:], fig2d['hys02'][1,:], marker='.', c='m')
-plt.plot(fig2d['hys03'][0,:], fig2d['hys03'][1,:], marker='.', c='c')
+#plt.plot(fig2d['hys02'][0,:], fig2d['hys02'][1,:], marker='.', c='m')
+#plt.plot(fig2d['hys03'][0,:], fig2d['hys03'][1,:], marker='.', c='c')
 
 plt.axhspan(3, 8, xmax=0.73, color=(1.0,0.7,0.7))
 plt.axhspan(-16, -11, xmin=0.36, color=(0.7,0.7,1.0))
@@ -104,13 +110,15 @@ plt.axhspan(-16, -11, xmin=0.36, color=(0.7,0.7,1.0))
 #plt.xlabel(r'$\bar{n}_e$ [$10^{20} \mathrm{m}^{-3}$]')
 #plt.ylabel(r'$v_{tor}$ [km/s]')
 
-plt.ylabel(r'$v_{tor}$ (km/s)')
-plt.xlabel(r'$\bar{n}_e$ ($10^{20} \mathrm{m}^{-3}$)')
+plt.ylabel(r'Toroidal Rotation Velocity (km/s)')
+plt.xlabel(r'Line-Average Density ($10^{20} \mathrm{m}^{-3}$)')
+
+plt.xlim([0.7, 1.0])
 
 ax = plt.subplot(111)
-ax.text(0.99, 0.98, '1160506007', transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6})
-ax.text(0.99, 0.93, '1160506008', transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6}, color='m')
-ax.text(0.99, 0.88, '1160506024', transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6}, color='c')
+#ax.text(0.99, 0.98, '1160506007', transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6})
+#ax.text(0.99, 0.93, '1160506008', transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6}, color='m')
+#ax.text(0.99, 0.88, '1160506024', transform=ax.transAxes, horizontalalignment='right', verticalalignment='top', fontdict={'size': 6}, color='c')
 
 plt.tight_layout()
 plt.tight_layout()
