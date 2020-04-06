@@ -120,10 +120,10 @@ plt.close('all')
 t = np.linspace(0,100)
 system = scipy.integrate.odeint(deriv, statevec, t)
 
+# %%
 
-
-#system = ode(deriv).set_integrator('lsoda', method='bdf')
-#system.set_initial_value(statevec, 0)
+system = ode(deriv).set_integrator('lsoda', method='bdf')
+system.set_initial_value(statevec, 0)
 
 plt.figure()
 

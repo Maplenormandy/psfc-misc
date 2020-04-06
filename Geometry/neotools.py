@@ -17,6 +17,8 @@ import MDSplus
 
 import eqtools
 
+import matplotlib as mpl
+
 from skimage import measure
 
 # %%
@@ -58,7 +60,7 @@ class EquilibriumGeometry:
         
         self.calculate_ft()
         
-    def setup_flux_contours(self):
+    def setup_flux_contours(self, refineFactor=4):
         """
         Sets up the flux contours in RZ space on which to perform flux surface averaging.
         This is done by finding contours of the poloidal flux using skimage
@@ -67,8 +69,6 @@ class EquilibriumGeometry:
         
         self.npsi = len(e.getRmidPsi()[self.tind])
         self.psigrid = np.linspace(0, 1, self.npsi)
-        
-        refineFactor = 4
         
         # This is the default psigrid to evaluate on
         psigridRefine = np.linspace(0, 1, self.npsi * refineFactor)
@@ -80,6 +80,11 @@ class EquilibriumGeometry:
         # to the first point, so if a closed contour is desired, the last point
         # must be repeated
         self.psicontours = [None]*(len(self.psigridEv))
+        
+        # rtheta is an array of numpy arrays (r,theta) which parameterizes the flux
+        # surface. nu gives the "straight field line" coordinate.
+        self.psicontours_rtheta = [None]*(len(self.psigridEv))
+        self.psicontours_nu = [None]*(len(self.psigridEv))
         
         # The following two are the length element (ds) and the flux surface
         # area element (ds/Bp) for each flux surface element given in psicontours.
@@ -110,25 +115,26 @@ class EquilibriumGeometry:
         self.psinormfunc = scipy.interpolate.RectBivariateSpline(rgrid, zgrid, self.psinormRZ.T, kx=2, ky=2)
         
         # Set up an upscaled version of the poloidal flux, since the conour finder
-        # performs better on the upscaled version
-        rgrid_upscaled = np.linspace(rgrid[0], rgrid[-1], len(rgrid)*4)
+        # performs better on the upscaled version. Note that we flip it so that
+        # the break in the contours occurs on the high field side.
+        rgrid_upscaled = np.linspace(rgrid[0], rgrid[-1], len(rgrid)*4)[::-1]
         zgrid_upscaled = np.linspace(zgrid[0], zgrid[-1], len(zgrid)*8)
         rmesh, zmesh = np.meshgrid(rgrid_upscaled, zgrid_upscaled)
         
         rfunc = scipy.interpolate.interp1d(range(len(rgrid_upscaled)), rgrid_upscaled)
         zfunc = scipy.interpolate.interp1d(range(len(zgrid_upscaled)), zgrid_upscaled)
-        psinormRZ_upscaled = self.psinormfunc.ev(rmesh, zmesh)
+        psinormRZ_upscaled = self.psinormfunc.ev(rmesh, zmesh).T
         
         
         # Use skimage to get contours easily for us
         for i in range(len(self.psigridEv)):
             contours = measure.find_contours(psinormRZ_upscaled, self.psigridEv[i])
             if len(contours) == 1:
-                self.psicontours[i] = np.array([rfunc(contours[0][:,1]), zfunc(contours[0][:,0])])
+                self.psicontours[i] = np.array([rfunc(contours[0][::-1,0]), zfunc(contours[0][::-1,1])])
             elif len(contours) > 1:
                 minDist = np.inf
                 for c in contours:
-                    rz = np.array([rfunc(c[:,1]), zfunc(c[:,0])])
+                    rz = np.array([rfunc(c[::-1,0]), zfunc(c[::-1,1])])
                     
                     if np.linalg.norm(np.mean(rz, axis=1) - self.magRZ) < minDist:
                         self.psicontours[i] = rz
@@ -138,12 +144,15 @@ class EquilibriumGeometry:
         
         if self.plotting:
             plt.figure()
+            
+        ffunc = scipy.interpolate.interp1d(self.psigrid, self.e.getF()[self.tind])
+        qfunc = scipy.interpolate.interp1d(self.psigrid, self.e.getQProfile()[self.tind])
         
         # Resample the contours such that the point spacings are of approximately equal arclength
         for i in range(len(self.psigridEv)):
             cRZ = self.psicontours[i]
             
-            ctheta = np.unwrap(np.arctan2(cRZ[1] - self.magZ, cRZ[0] - self.magR))
+            ctheta = np.unwrap(np.arctan2(cRZ[1] - self.magZ, cRZ[0] - self.magR))-2*np.pi
             cr = np.linalg.norm(cRZ - self.magRZ[:,np.newaxis], axis=0)
             
             dtheta = np.unwrap(np.diff(ctheta))
@@ -171,18 +180,36 @@ class EquilibriumGeometry:
             
             resampled_cRZ = np.array([np.cos(ctheta2), np.sin(ctheta2)]*cr2[np.newaxis,:]) + self.magRZ[:,np.newaxis]
             
-            if self.plotting:
-                plt.plot(resampled_cRZ[0,:], resampled_cRZ[1,:], marker='.')
+            
             
             self.psicontours[i] = resampled_cRZ
             self.psicontours_ds[i] = ds2
+            self.psicontours_rtheta[i] = np.array([cr2, ctheta2])
             
             # This equation is abs(del(psi) cross del(toroidal angle))
             br_norm = -self.psinormfunc.ev(resampled_cRZ[0,:], resampled_cRZ[1,:], dy=1)
             bz_norm = self.psinormfunc.ev(resampled_cRZ[0,:], resampled_cRZ[1,:], dx=1)
             bp_norm = np.sqrt(br_norm**2 + bz_norm**2)/resampled_cRZ[0,:]
             self.psicontours_dsbp[i] = ds2/bp_norm
+
+            # Equation (2.9) from the GYRO technical manual
+            f = ffunc(self.psigridEv[i])
+            q = qfunc(self.psigridEv[i])
+            # This is calculating q*eta, where eta is the straight field line coordinate 
+            self.psicontours_nu[i] = -f * np.cumsum(ds2 / bp_norm / resampled_cRZ[0,:]**2) / self.psiRange
             
+            # Align it such that theta=0 gives nu=0
+            nuFunc = scipy.interpolate.interp1d(ctheta2, self.psicontours_nu[i], kind='quadratic')
+            self.psicontours_nu[i] = self.psicontours_nu[i] - nuFunc(0)
+
+            if self.plotting:
+                plt.scatter(resampled_cRZ[0,:], resampled_cRZ[1,:], c=self.psicontours_nu[i]/2/np.pi/q, marker='o', cmap='PiYG', edgecolors='none')
+                #plt.scatter(resampled_cRZ[0,:], resampled_cRZ[1,:], c=self.psicontours_rtheta[i][1:]/2/np.pi, marker='o', cmap='PiYG', edgecolors='none')
+                
+        if self.plotting:
+            plt.colorbar()
+            plt.axis('equal')
+    
     def fs_integrate(self, f):
         """
         Takes in a function of (R,Z,psi) and returns an array of the flux-surface

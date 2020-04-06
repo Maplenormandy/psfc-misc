@@ -886,5 +886,3 @@ ax8_right[0].set_title('PCI Asymmetry')
 
 
 plt.savefig('fig_pci_spec.eps', format='eps', dpi=240, facecolor='white')
-
-# %%
