@@ -274,3 +274,22 @@ plt.scatter(sawtimes, sawData)
 
 plt.figure()
 plt.scatter(sawtimes[:-1], np.diff(sawtimes))
+
+# %%
+
+fz = np.fft.fftshift(np.fft.fft(szrRot, axis=1), axes=1)/2e3/2e3
+#fz_loc = np.fft.fftshift(np.fft.fft(z_loc))/2e3/2e3
+freqs = np.fft.fftshift(np.fft.fftfreq(4096, 1.0/2e6))
+
+# %%
+
+down_samples = 512
+
+tind_loc, tind_soc = np.searchsorted(sawtimes, (0.96, 0.6))
+
+f_down = np.average(np.reshape(freqs/1e3, (down_samples, -1)), axis=-1)
+pow_soc = np.average(np.reshape(np.abs(fz[tind_soc,:])**2, (down_samples, -1)), axis=-1)
+pow_loc = np.average(np.reshape(np.abs(fz[tind_loc,:])**2, (down_samples, -1)), axis=-1)
+
+plt.semilogy(f_down, pow_soc, c='b')
+plt.semilogy(f_down, pow_loc, c='r')

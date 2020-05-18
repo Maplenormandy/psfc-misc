@@ -115,7 +115,7 @@ neg_power = np.zeros((2,6,ky_max))
 
 plt.figure()
 
-case='1.1 MA SOC'
+case='1.1 MA LOC'
 
 if case == '0.8 MA LOC':
     t_pci = 0.96
@@ -212,9 +212,8 @@ for r in range(6):
     
     
     cR, cZ, kR, kZ = getEikonal(psi_plot)
-    eik_plot = np.logical_and(cR<0.705+0.04, cR>0.675+0.04)
-    #eik_plot = np.logical_and(cR<0.705, cR>0.695)
-    #eik_plot = np.logical_and(cR<0.735, cR>0.645)
+    eik_plot = np.logical_and(cR<0.705, cR>0.675) # High-k configuration
+    #eik_plot = np.logical_and(cR<0.735, cR>0.645) # Low-k configuration
     
     kR_visible = kR[eik_plot]
     
@@ -233,8 +232,8 @@ for r in range(6):
             plt.scatter(kR_plot[kR_plot>0], freq_plot[kR_plot>0], marker='^', c='r')
             plt.scatter(kR_plot[kR_plot<0], freq_plot[kR_plot<0], marker='v', c='r')
             
-        pos_power[loc_ind,r,i] = np.sum(spec_func(kR_plot[kR_plot>0], freq_plot[kR_plot>0], grid=False)/pci_resp_func(freq_plot[kR_plot>0]))
-        neg_power[loc_ind,r,i] = np.sum(spec_func(kR_plot[kR_plot<0], freq_plot[kR_plot<0], grid=False)/pci_resp_func(freq_plot[kR_plot<0]))
+        #pos_power[loc_ind,r,i] = np.sum(spec_func(kR_plot[kR_plot>0], freq_plot[kR_plot>0], grid=False)/pci_resp_func(freq_plot[kR_plot>0]))
+        #neg_power[loc_ind,r,i] = np.sum(spec_func(kR_plot[kR_plot<0], freq_plot[kR_plot<0], grid=False)/pci_resp_func(freq_plot[kR_plot<0]))
 
         
 plt.xlim([-30,30])
@@ -242,9 +241,10 @@ plt.ylim([0, 1250])
 plt.title(case)
 
 # %%
-
+"""
 plt.figure()
 plt.loglog(ky_rhos[:ky_max], pos_power[0,2,:]*ky_rhos[:ky_max], c='b')
 plt.loglog(ky_rhos[:ky_max], neg_power[0,2,:]*ky_rhos[:ky_max], c='b', ls='--')
 plt.loglog(ky_rhos[:ky_max], pos_power[1,2,:]*ky_rhos[:ky_max], c='r')
 plt.loglog(ky_rhos[:ky_max], neg_power[1,2,:]*ky_rhos[:ky_max], c='r', ls='--')
+"""

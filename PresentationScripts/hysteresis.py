@@ -98,7 +98,7 @@ def plotBrightness(shot):
 
 
  # %% 0.8 MA
-plt.figure()
+#plt.figure()
 #plotBtHysteresis(1160506019)
 #plotBtHysteresis(1160512025)
 #plotBtHysteresis(1160506024)
@@ -107,8 +107,8 @@ plt.figure()
 #plotBtHysteresis(1160506013)
 
 
-plotBtHysteresis(1160506007)
-plotBtHysteresis(1160506008)
+#plotBtHysteresis(1160506007)
+#plotBtHysteresis(1160506008)
 
 #plt.legend(loc='lower right')
 
@@ -122,14 +122,14 @@ plotBtHysteresis(1160506008)
 
 #plt.legend()
 
-sys.exit()
+#sys.exit()
 
 
 #plotBrightness(1150903021)
 
 # %% Calc data
 
-shotlist = [1160506001, 1160506002, 1160506003, 1160506007, 1160506008, 1160506009, 1160506010, 1160506013, 1160506024, 1160506025]
+shotlist = [1160506007, 1160506009]
 shotdata = [None]*len(shotlist)
 
 # 0.8 MA - 0, 3, 4, 7, 8, 9
@@ -187,7 +187,7 @@ for j in range(len(shotlist)):
 
 
     cdata = fftcece.cecedata()
-    cdata.fftBin = 512
+    cdata.fftBin = 64
     cdata.lagWindow = 0
     cdata.lowpassf = 1.5e6
     ttflower = 0
@@ -217,8 +217,8 @@ for j in range(len(shotlist)):
     for i in range(len(vt)):
         t = vt[i]
         print "cece", t
-        cdata.timeBegin = t-0.075
-        cdata.timeEnd = t+0.075
+        cdata.timeBegin = t-0.03
+        cdata.timeEnd = t+0.03
 
         cdata.calcAutoOverlap()
         cdata.calcCrossOverlap()
@@ -319,8 +319,8 @@ ceceDataL07 = (allcdata, allcstat, summed, vt, vy, nl04)
 
 f2index = int(700*1000*(float(cdata.fftBin)/cdata.samplingRate))
 
-print shotlist[4]
-data = shotdata[4]
+print shotlist[0]
+data = shotdata[0]
 
 X, Y = np.meshgrid(vt, hanningBase[f0index:f1index])
 toPlot = np.clip(data[0][:,f0index:f1index,:] - data[1][:,f0index:f1index,:], 0, 1000)
@@ -329,6 +329,7 @@ plt.figure()
 plt.pcolormesh(X, Y/1000, toPlot[:,:,1].T, cmap='cubehelix')
 plt.xlabel('time [sec]')
 plt.ylabel('freq [kHz]')
+
 
 """
 plt.scatter(vel(tg), ne0g/nl04(tg)*0.6, cmap='RdGy', c=nl04(tg))
@@ -343,7 +344,7 @@ plt.title('1.1MA, 1160506009')
 
 # %% Other cece plots
 
-ceceData = [shotdata[6]]
+ceceData = [shotdata[1]]
 
 #plt.figure()
 for data in ceceData:
@@ -352,7 +353,12 @@ for data in ceceData:
     vmid = (np.max(data[4]) + np.min(data[4]))/2.0
     vp = data[4]>vmid
     vn = data[4]<vmid
-    plt.scatter(data[5](vt[vp]), data[6][vp,0], marker='+', c='r', label='')
-    plt.scatter(data[5](vt[vn]), data[6][vn,0], marker='.', c='b', label='')
+    
+    plt.scatter(data[5](vt[vp])/0.6, data[7][vp,0], marker='+', c='r', label='')
+    plt.scatter(data[5](vt[vn])/0.6, data[7][vn,0], marker='.', c='b', label='')
+    
+    
+    #plt.plot(data[5](vt), data[7][:,1])    
+    
     #plt.plot(vt, data[2][:,0], c='0.75')
     #plt.scatter(vt, data[2][:,0], cmap='BrBG', c=data[4], marker='+')

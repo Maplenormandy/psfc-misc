@@ -251,8 +251,6 @@ plt.savefig('fig_hysteresis.eps', format='eps', dpi=1200, facecolor='white')
 
 # %% Figure 3: Profile matched plots
 
-against_roa = True
-
 fig3 = plt.figure(figsize=(3.375*2, 3.375*2.0))
 fig3_rows = 6
 fig3_cols = 3
@@ -274,7 +272,7 @@ itemp = np.array([ 0.58171643,  0.58086416,  0.58097034,  0.58196616,  0.5847296
         0.59318791,  0.59607954,  0.60142963,  0.60597674,  0.61373905,
         0.61998311,  0.63022579,  0.63822313])
 
-def plot_ion(shot, iondata, axti, axvtor, color='b'):
+def plot_ion(shot, roa, iondata, axti, axvtor, color='b'):
     #offset = ((shot%100)-4.0)/(25.0-7.0)*6
     offset = -2
 
@@ -284,47 +282,52 @@ def plot_ion(shot, iondata, axti, axvtor, color='b'):
     #specTree = MDSplus.Tree('spectroscopy', shot)
     #pos = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS6.HELIKE.MOMENTS.W:POS').data()
 
-    nch = iondata['meas_avg'].shape[1]
-    ch = list(reversed(range(nch)))
+    #nch = iondata['meas_avg'].shape[1]
+    #ch = list(reversed(range(nch)))
 
-    axti.errorbar(ch, meas_avg[2,:]-itemp, yerr=iondata['meas_std'][2,:], c=color, fmt='.')
-    axvtor.errorbar(ch, (meas_avg[1,:]+offset)*4, yerr=iondata['meas_std'][1,:], c=color, fmt='.')
+    axti.errorbar(roa, meas_avg[2,:]-itemp, yerr=iondata['meas_std'][2,:], c=color, fmt='.')
+    axvtor.errorbar(roa, (meas_avg[1,:]+offset)*4, yerr=iondata['meas_std'][1,:], c=color, fmt='.')
 
     plt.setp(axti.get_xticklabels(), visible=False)
     plt.setp(axvtor.get_xticklabels(), visible=False)
 
-    axti.set_xlim([-0.5,27.5])
-    axvtor.set_xlim([-0.5,27.5])
+    axti.set_xlim([0.0, 1.0])
+    axvtor.set_xlim([0.0, 1.0])
 
-    axti.xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
-    axvtor.xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
-
-
-    axti.axvline(15.5, c='k')
-    axvtor.axvline(15.5, c='k')
+    #axti.xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
+    #axvtor.xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
 
 
-def plot_ion_pair(shot, ax_base, t_loc=None, t_soc=None):
+    #axti.axvline(15.5, c='k')
+    #axvtor.axvline(15.5, c='k')
+
+
+def plot_ion_pair(shot, ax_base, t_loc, t_soc):
     socdata = np.load('/home/normandy/git/bsfc/bsfc_fits/fit_data/mf_%d_nh3_t0.npz'%shot)
     locdata = np.load('/home/normandy/git/bsfc/bsfc_fits/fit_data/mf_%d_nh3_t2.npz'%shot)
     
-    if against_roa:
-        momNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS1.HLIKE.MOMENTS.LYA1:MOM')
-        psin_raw = momNode.dim_of(0).data()
-        time = momNode.dim_of(1).data()
-        
-        t0 = time[13]
-        psin = psin_raw[13,:16]
-        e = eqtools.CModEFITTree(shot)
-    else:
-        plot_ion(shot, locdata, ax_base[0,2], ax_base[1,2], 'r')
-        plot_ion(shot, socdata, ax_base[0,2], ax_base[1,2], 'b')
-        ax_base[1,2].axhline(ls='--', c='k')
+    momNode = specTree.getNode(r'\SPECTROSCOPY::TOP.HIREXSR.ANALYSIS.HELIKE.MOMENTS.W:MOM')
+    psin_raw = momNode.dim_of(0).data()
+    time = momNode.dim_of(1).data()
+    time = time[time>0]
+    
+    
+    tind_loc, tind_soc = np.searchsorted(time, (t_loc, t_soc))
+
+    psin_loc = psin_raw[tind_loc,:locdata['meas_avg'].shape[1]]
+    psin_soc = psin_raw[tind_soc,:locdata['meas_avg'].shape[1]]
+    e = eqtools.CModEFITTree(shot)
+    
+    roa_loc = e.psinorm2roa(psin_loc, t_loc)
+    roa_soc = e.psinorm2roa(psin_soc, t_soc)
+    
+    plot_ion(shot, roa_loc, locdata, ax_base[0,2], ax_base[1,2], 'r')
+    plot_ion(shot, roa_soc, socdata, ax_base[0,2], ax_base[1,2], 'b')
 
 
-plot_ion_pair(1160506007, ax3[0,:,:])
-plot_ion_pair(1160506009, ax3[1,:,:])
-plot_ion_pair(1160506015, ax3[2,:,:])
+plot_ion_pair(1160506007, ax3[0,:,:], 0.96, 0.6)
+plot_ion_pair(1160506009, ax3[1,:,:], 0.92, 0.72)
+plot_ion_pair(1160506015, ax3[2,:,:], 0.9, 0.68)
 
 
 def plot_profs(shot, folder, axp, axd, color='b', data='ne'):
